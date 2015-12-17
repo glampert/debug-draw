@@ -107,13 +107,16 @@ int main()
 
     while (!quitting)
     {
-        // Any other drawing that you alread do
+        // Any other drawing that you already do
         ...
 
         // Call any dd:: functions to add debug primitives to the draw queues
         ...
 
         dd::flush(getTimeMilliseconds());
+
+        // Swap buffers to present the scene
+        ...
     }
 
     dd::shutdown();
