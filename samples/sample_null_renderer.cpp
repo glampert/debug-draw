@@ -5,6 +5,10 @@
 // Author: Guilherme R. Lampert
 // Created on: 17/12/15
 // Brief: Minimal Debug Draw usage sample that does nothing (a null renderer).
+//
+// This software is in the public domain. Where that dedication is not recognized,
+// you are granted a perpetual, irrevocable license to copy, distribute, and modify
+// this file as you see fit.
 // ================================================================================================
 
 #define DEBUG_DRAW_IMPLEMENTATION

@@ -5,14 +5,20 @@
 // Author: Guilherme R. Lampert
 // Created on: 15/12/15
 // Brief: Common code shared by the Debug Draw samples.
+//
+// This software is in the public domain. Where that dedication is not recognized,
+// you are granted a perpetual, irrevocable license to copy, distribute, and modify
+// this file as you see fit.
 // ================================================================================================
 
 #ifndef DD_SAMPLES_COMMON_HPP
 #define DD_SAMPLES_COMMON_HPP
 
 // Shared dependencies:
-#include <cmath>
 #include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <cstdio>
 #include <cstring>
 #include <iostream>
 #include <GLFW/glfw3.h>

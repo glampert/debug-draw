@@ -5,6 +5,10 @@
 // Author: Guilherme R. Lampert
 // Created on: 15/12/15
 // Brief: Debug Draw usage sample with legacy (AKA fixed function) OpenGL.
+//
+// This software is in the public domain. Where that dedication is not recognized,
+// you are granted a perpetual, irrevocable license to copy, distribute, and modify
+// this file as you see fit.
 // ================================================================================================
 
 #define DEBUG_DRAW_IMPLEMENTATION
@@ -243,13 +247,13 @@ public:
 
     static GLuint handleToGL(dd::GlyphTextureHandle handle)
     {
-        const std::uintptr_t temp = reinterpret_cast<std::uintptr_t>(handle);
+        const std::size_t temp = reinterpret_cast<std::size_t>(handle);
         return static_cast<GLuint>(temp);
     }
 
     static dd::GlyphTextureHandle GLToHandle(const GLuint id)
     {
-        const std::uintptr_t temp = static_cast<std::uintptr_t>(id);
+        const std::size_t temp = static_cast<std::size_t>(id);
         return reinterpret_cast<dd::GlyphTextureHandle>(temp);
     }
 
@@ -458,9 +462,8 @@ static void sampleAppStart()
     }
 
     // Things we need for the window / GL render context:
-    glfwWindowHint(GLFW_RESIZABLE,    false);
-    glfwWindowHint(GLFW_DOUBLEBUFFER, true);
-    glfwWindowHint(GLFW_DEPTH_BITS,   32);
+    glfwWindowHint(GLFW_RESIZABLE, false);
+    glfwWindowHint(GLFW_DEPTH_BITS, 32);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
