@@ -1152,30 +1152,31 @@ void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, co
     const float fixedHeight = DD_FONT_CHAR_SET.charHeight;
     const float tabsWidth   = fixedWidth * 4.0f; // TAB = 4 spaces.
 
-    for (const char * p = text; *p != '\0'; ++p)
+    for (; *text != '\0'; ++text)
     {
-        if (static_cast<int>(*p) >= FontCharSet::MaxChars)
+        const int charVal = *text;
+        if (charVal >= FontCharSet::MaxChars)
         {
             continue;
         }
-        if (*p == ' ')
+        if (charVal == ' ')
         {
             x += fixedWidth * scaling;
             continue;
         }
-        if (*p == '\t')
+        if (charVal == '\t')
         {
             x += tabsWidth * scaling;
             continue;
         }
-        if (*p == '\n')
+        if (charVal == '\n')
         {
             y += fixedHeight * scaling;
             x  = initialX;
             continue;
         }
 
-        const FontChar fontChar = DD_FONT_CHAR_SET.chars[static_cast<int>(*p)];
+        const FontChar fontChar = DD_FONT_CHAR_SET.chars[charVal];
         const float u0 = (fontChar.x + 0.5f) / scaleU;
         const float v0 = (fontChar.y + 0.5f) / scaleV;
         const float u1 = u0 + (fixedWidth  / scaleU);

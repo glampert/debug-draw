@@ -3,8 +3,9 @@
 # Brief: Makefile for the Debug Draw samples.
 #
 # Remarks:
-# - Tested only on Mac OSX.
-# - GLFW must be installed in the system.
+# - Tested only on Mac OSX; Should work on Linux.
+# - GLFW must be installed on the system.
+#   (http://www.glfw.org)
 #------------------------------------------------
 
 # Select the proper OpenGL library for Mac (-framework OpenGL)
@@ -17,14 +18,21 @@ else
   OPENGL_LIB = -lGL
 endif
 
-# Should be installed and visible in the system path!
-GLFW_LIB = -lGLFW3
+# GLFW Should be installed and visible in the system path!
+ifeq ($(UNAME), Darwin)
+  CXXFLAGS = -Weffc++
+  GLFW_LIB = -L/usr/local/lib -lglfw3
+endif
+ifeq ($(UNAME), Linux)
+  CXXFLAGS = `pkg-config --cflags glfw3`
+  GLFW_LIB = `pkg-config --static --libs glfw3`
+endif
 
 # Define 'VERBOSE' to get the full console output.
 # Otherwise we print a shorter message for each rule.
 ifndef VERBOSE
   QUIET          = @
-  ECHO_COMPILING = @echo "-> Building OpenGL samples ..."
+  ECHO_COMPILING = @echo "-> Building Debug Draw samples ..."
   ECHO_CLEANING  = @echo "-> Cleaning ..."
 endif
 
@@ -34,7 +42,7 @@ endif
 
 LIB_FILES = $(OPENGL_LIB) $(GLFW_LIB)
 INC_DIRS  = -I. -I.. -Ivectormath -Igl3w/include
-CXXFLAGS  = $(INC_DIRS) -Wall -Wextra -Weffc++ -Winit-self -Wunused -Wshadow
+CXXFLAGS += $(INC_DIRS) -O2 -Wall -Wextra -Winit-self -Wunused -Wshadow
 
 SRC_FILES_GL_LEGACY_SAMP  = sample_gl_legacy.cpp
 BIN_TARGET_GL_LEGACY_SAMP = sample_gl_legacy
