@@ -3,7 +3,7 @@
 
 An immediate-mode, renderer agnostic, lightweight debug drawing API for C++.
 
-![Debug Draw](shapes.png "Debug Draw shapes")
+![Debug Draw](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/shapes.png "Debug Draw shapes")
 
 ## License
 
@@ -32,7 +32,7 @@ In `my_program.cpp`:
 ```
 
 Now in `my_program.hpp` or any other header or source file,
-you can include it as a normal header file:
+you can include it as a normal C++ header:
 
 ```cpp
 #include "debug_draw.hpp"
@@ -69,11 +69,11 @@ public:
 Not all methods have to be implemented, you decide which features to support!
 Look into the source code for the declaration of `RenderInterface`. Each method is
 well commented and describes the expected behavior that you should implement.
-For sample implementations of the `RenderInterface` using standard APIs like OpenGL,
+For reference implementations of the `RenderInterface` using standard APIs like OpenGL,
 refer to the `samples/` directory in this project.
 
 Once you implement a `RenderInterface` for your renderer, all you need to do before starting
-to use Debug Draw is to call `dd::initialize()` passing a pointer to your custom `RenderInterface`:
+to use Debug Draw is to call `dd::initialize()` passing it a pointer to your custom `RenderInterface`:
 
 ```cpp
 MyRenderInterface renderIface;
@@ -88,6 +88,36 @@ at the end of a frame, before flipping the screen buffers:
 // You only have to pass the current time if you have
 // timed debug draws in the queue. Otherwise just pass 0.
 dd::flush(getTimeMilliseconds());
+```
+
+So the overall setup should look something like the following:
+
+```cpp
+class MyRenderInterface
+    : public dd::RenderInterface
+{
+    // Cherrypick the methods you want to implement or implement them all
+    ...
+};
+
+int main()
+{
+    MyRenderInterface renderIface;
+    dd::initialize(&renderIface);
+
+    while (!quitting)
+    {
+        // Any other drawing that you alread do
+        ...
+
+        // Call any dd:: functions to add debug primitives to the draw queues
+        ...
+
+        dd::flush(getTimeMilliseconds());
+    }
+
+    dd::shutdown();
+}
 ```
 
 ### Configuration switches
@@ -131,7 +161,7 @@ dd::box(boxCenter, boxColor, 1.5f, 1.5f, 1.5f);
 dd::cross(boxCenter, 1.0f);
 ```
 
-![box](box.png "Box with coordinate axes")
+![box](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/box.png "Box with coordinate axes")
 
 To visualize a matrix transform, you can use `dd::axisTriad()`
 to draw the transform as three arrows:
@@ -147,7 +177,7 @@ const ddMat4x4 transform = { // The identity matrix
 dd::axisTriad(transform, 0.3f, 2.0f);
 ```
 
-![arrows](arrows.png "Axis triad repesenting a 3D transform")
+![arrows](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/arrows.png "Axis triad repesenting a 3D transform")
 
 More complex samples and how to integrate Debug Draw with your own renderer can
 be found inside the `samples/` directory. Each function provided the API is also well
