@@ -48,7 +48,7 @@ Debug Draw doesn't make assumptions about the underlaying renderer API, so it ca
 integrated very easily with Direct3D or OpenGL or any other rendering engine of
 your choice. All that is required is that you provide an implementation for the
 `dd::RenderInterface` abstract class, which provides Debug Draw with basic methods
-to draw points, lines and character glyphs. The following is what `RenderInterface` look like:
+to draw points, lines and character glyphs. The following is what `RenderInterface` looks like:
 
 ```cpp
 class RenderInterface
@@ -82,7 +82,7 @@ MyRenderInterface renderIface;
 dd::initialize(&renderIface);
 ```
 
-Note however that Debug Draw batches all primitives to reduce the number of call to `RenderInterface`,
+Note however that Debug Draw batches all primitives to reduce the number of calls to `RenderInterface`,
 so drawing will only actually take place by the time you call `dd::flush()`, which is normally done
 at the end of a frame, before flipping the screen buffers:
 
@@ -137,7 +137,7 @@ and also to be very portable. The only requirement is a C++98 compiler or better
 availability of a few interesting C++11 features, but fall-backs are provided so you can also integrate
 it with older projects.
 
-RTTI and C++ Exceptions are also not used, so you should have no problems integrating
+RTTI and C++ Exceptions **are not used**, so you should have no problems integrating
 the library with projects that disable those features.
 
 The memory footprint is also small and you can manage the amount of memory that is committed
