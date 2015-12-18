@@ -11,7 +11,7 @@
 # Select the proper OpenGL library for Mac (-framework OpenGL)
 # or use a default (-lGL) that should work on most Unix-like systems.
 # This script also assumes GLFW is installed and available in the system path.
-UNAME = $(shell uname)
+UNAME = $(shell uname -s)
 ifeq ($(UNAME), Darwin)
   OPENGL_LIB = -framework CoreFoundation -framework OpenGL
 else
@@ -40,9 +40,10 @@ endif
 # Macros / source files:
 #------------------------------------------------
 
-LIB_FILES = $(OPENGL_LIB) $(GLFW_LIB)
+LIBRARIES = $(OPENGL_LIB) $(GLFW_LIB)
 INC_DIRS  = -I. -I.. -Ivectormath -Igl3w/include
 CXXFLAGS += $(INC_DIRS) -O2 -Wall -Wextra -Winit-self -Wunused -Wshadow
+CFLAGS    = $(CXXFLAGS)
 
 SRC_FILES_GL_LEGACY_SAMP  = sample_gl_legacy.cpp
 BIN_TARGET_GL_LEGACY_SAMP = sample_gl_legacy
@@ -59,9 +60,9 @@ BIN_TARGET_NULL_SAMP = sample_null_renderer
 
 all:
 	$(ECHO_COMPILING)
-	$(QUIET) $(CXX) $(CXXFLAGS) $(LIB_FILES) $(SRC_FILES_NULL_SAMP)      -o $(BIN_TARGET_NULL_SAMP)
-	$(QUIET) $(CXX) $(CXXFLAGS) $(LIB_FILES) $(SRC_FILES_GL_LEGACY_SAMP) -o $(BIN_TARGET_GL_LEGACY_SAMP)
-	$(QUIET) $(CXX) $(CXXFLAGS) $(LIB_FILES) $(SRC_FILES_GL_CORE_SAMP)   -o $(BIN_TARGET_GL_CORE_SAMP)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_NULL_SAMP)      -o $(BIN_TARGET_NULL_SAMP)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_LEGACY_SAMP) -o $(BIN_TARGET_GL_LEGACY_SAMP) $(LIBRARIES)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_CORE_SAMP)   -o $(BIN_TARGET_GL_CORE_SAMP)   $(LIBRARIES)
 
 clean:
 	$(ECHO_CLEANING)
