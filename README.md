@@ -19,11 +19,11 @@ No attribution is required, but a mention about the author(s) is appreciated.
 ## Using Debug Draw
 
 Debug Draw is a single source file library, so the "header" forward declarations and
-the implementation are contained in the same file. This should facilitate deployment
-and integration with your own projects. All you have to do is `#include` the library
+the implementation are contained in the same file (`debug_draw.hpp`). This should facilitate
+deployment and integration with your own projects. All you have to do is `#include` the library
 file in one of your own source files and define `DEBUG_DRAW_IMPLEMENTATION` in that
 file to generate the implementation. You can also still include the library in other
-places. When `DEBUG_DRAW_IMPLEMENTATION` is not defined, it acts as a normal header file.
+places. When `DEBUG_DRAW_IMPLEMENTATION` is not defined, it acts as a normal C++ header file.
 Example:
 
 In `my_program.cpp`:
@@ -48,7 +48,7 @@ Debug Draw doesn't make assumptions about the underlaying renderer API, so it ca
 integrated very easily with Direct3D or OpenGL or any other rendering engine of
 your choice. All that is required is that you provide an implementation for the
 `dd::RenderInterface` abstract class, which provides Debug Draw with basic methods
-to draw points, lines and character glyphs. The following is what `RenderInterface` looks like:
+to draw points, lines and character glyphs. The following is what `dd::RenderInterface` looks like:
 
 ```cpp
 class RenderInterface
@@ -88,15 +88,14 @@ at the end of a frame, before flipping the screen buffers:
 
 ```cpp
 // You only have to pass the current time if you have
-// timed debug draws in the queue. Otherwise just pass 0.
+// timed debug draws in the queues. Otherwise just pass 0.
 dd::flush(getTimeMilliseconds());
 ```
 
 So the overall setup should look something like the following:
 
 ```cpp
-class MyRenderInterface
-    : public dd::RenderInterface
+class MyRenderInterface : public dd::RenderInterface
 {
     // Cherrypick the methods you want to implement or implement them all
     ...
@@ -140,7 +139,7 @@ it with older projects.
 RTTI and C++ Exceptions **are not used**, so you should have no problems integrating
 the library with projects that disable those features.
 
-The memory footprint is also small and you can manage the amount of memory that is committed
+The memory footprint is also small and you can manage the amount of memory that gets committed
 to the internal queues via preprocessor directives. We currently only allocate a small amount of
 dynamic memory at library startup to decompress the font glyphs for the debug text drawing functions.
 Apart from that, all data used by the library is statically allocated as file scoped `static`s.
@@ -149,7 +148,7 @@ Apart from that, all data used by the library is statically allocated as file sc
 
 Due to its procedural layout and use of static data, Debug Draw *is not thread safe*,
 so its public API cannot be called from multiple threads. This shouldn't be a problem
-for the vast majority of users, since rendering doesn't lend well parallelization. OpenGL
+for the vast majority of users, since rendering doesn't lend well to parallelization. OpenGL
 and Direct3D calls are normally issued from a single thread. If you really happen to need
 thread-safety, a simple solution might be just making the `static` buffers used by the
 implementation thread-local.
@@ -178,7 +177,6 @@ const ddMat4x4 transform = { // The identity matrix
     0.0f, 0.0f, 1.0f, 0.0f,
     0.0f, 0.0f, 0.0f, 1.0f
 };
-
 dd::axisTriad(transform, 0.3f, 2.0f);
 ```
 

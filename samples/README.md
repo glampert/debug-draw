@@ -13,7 +13,7 @@ Three sample programs showing basic usage of the Debug Draw library are provided
 - `sample_gl_legacy.cpp`: Exact same as the core GL sample, but uses a legacy (AKA fixed-function)
   OpenGL renderer instead.
 
-- `samples_common.hpp`: Contains code shared by all samples, like input handling and camera/controls.
+- `samples_common.hpp`: Contains code shared by all samples, such as input handling and camera/controls.
 
 ----
 
@@ -30,7 +30,7 @@ installed properly. Running them requires at least OpenGL v3.2, but due to hardw
 there's no guarantee that they will render the expected outputs. Little to no handling is done to
 account for GL version and hardware differences, so the samples might not run properly on your machine.
 
-The main idea is that they serve as a rough guide on how to integrate Debug Draw in your own projects,
-so there's more value in the code itself then in the demo applications, which are just drawing some line
+The main idea is that they serve as a rough guide on how to integrate Debug Draw into your own projects,
+so there's more value in the code itself than in the demo applications, which are just drawing some line
 shapes in the 3D world and text, nothing more.
 
