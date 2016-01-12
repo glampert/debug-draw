@@ -642,8 +642,8 @@ void clear();
 // might have constructors/destructors if redefined
 // by the library user. Our default DebugString type
 // uses std::string, so it has an implicit constructor
-// and destructor pair, which triggers these two warnings
-// if they are enabled.
+// and destructor pair, which also triggers these two
+// warnings if they are enabled.
 //
 #ifdef __clang__
     #pragma clang diagnostic push
@@ -716,7 +716,7 @@ void clear();
 #define DD_TAU              (DD_PI * 2.0f)
 #define DD_DEG2RAD(degrees) (static_cast<float>(degrees) * DD_PI / 180.0f)
 #define DD_ARRAY_LEN(arr)   (static_cast<int>(sizeof(arr) / sizeof((arr)[0])))
-#define DD_CHECK_INIT       if (renderIface == DD_NULL) { return; }
+#define DD_CHECK_INIT       if (g_renderInterface == DD_NULL) { return; }
 
 namespace dd
 {
@@ -749,16 +749,16 @@ struct FontCharSet
 // These are defined at the end of the file. Data for the arrays
 // was generated with font-tool (https://github.com/glampert/font-tool)
 // from the Monoid font face (https://github.com/larsenwork/monoid)
-extern const FontCharSet fontMonoid18CharSet;
-extern const int fontMonoid18BitmapSizeBytes;
-extern const unsigned char fontMonoid18Bitmap[];
+extern const int g_fontMonoid18BitmapSizeBytes;
+extern const unsigned char g_fontMonoid18Bitmap[];
+extern const FontCharSet g_fontMonoid18CharSet;
 
 // If you decide to change the font, these are the only things that
 // need to be updated. The fontXYZCharSet variables are never
 // referenced directly in the code, these macros are used instead.
-#define DD_FONT_CHAR_SET    fontMonoid18CharSet
-#define DD_FONT_BITMAP      fontMonoid18Bitmap
-#define DD_FONT_BITMAP_SIZE fontMonoid18BitmapSizeBytes
+#define DD_FONT_BITMAP_SIZE g_fontMonoid18BitmapSizeBytes
+#define DD_FONT_BITMAP      g_fontMonoid18Bitmap
+#define DD_FONT_CHAR_SET    g_fontMonoid18CharSet
 
 // ========================================================
 // Internal Debug Draw queue and helper types/functions:
@@ -797,29 +797,29 @@ struct DebugLine
 };
 
 // Debug strings queue (2D screen-space strings + 3D projected labels):
-static int debugStringsCount = 0;
-static DebugString debugStrings[DEBUG_DRAW_MAX_STRINGS];
+static int g_debugStringsCount = 0;
+static DebugString g_debugStrings[DEBUG_DRAW_MAX_STRINGS];
 
 // 3D debug points queue:
-static int debugPointsCount = 0;
-static DebugPoint debugPoints[DEBUG_DRAW_MAX_POINTS];
+static int g_debugPointsCount = 0;
+static DebugPoint g_debugPoints[DEBUG_DRAW_MAX_POINTS];
 
 // 3D debug lines queue:
-static int debugLinesCount = 0;
-static DebugLine debugLines[DEBUG_DRAW_MAX_LINES];
+static int g_debugLinesCount = 0;
+static DebugLine g_debugLines[DEBUG_DRAW_MAX_LINES];
 
 // Temporary vertex buffer we use to expand the lines/points before calling on RenderInterface.
-static int vertexBufferUsed = 0;
-static DrawVertex vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE];
+static int g_vertexBufferUsed = 0;
+static DrawVertex g_vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE];
 
 // Latest time value (in milliseconds) from dd::flush().
-static ddI64 currentTimeMillis = 0;
+static ddI64 g_currentTimeMillis = 0;
 
 // Ref to the external renderer. Can be null for a no-op debug draw.
-static RenderInterface * renderIface = DD_NULL;
+static RenderInterface * g_renderInterface = DD_NULL;
 
 // Our built-in glyph bitmap. If kept null, no text is rendered.
-static GlyphTextureHandle glyphTex = DD_NULL;
+static GlyphTextureHandle g_glyphTex = DD_NULL;
 
 // ========================================================
 // Fast approximations of math functions used by DD.
@@ -1061,7 +1061,7 @@ enum DrawMode
 
 void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
 {
-    if (vertexBufferUsed == 0)
+    if (g_vertexBufferUsed == 0)
     {
         return;
     }
@@ -1069,28 +1069,28 @@ void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
     switch (mode)
     {
     case DrawModePoints :
-        renderIface->drawPointList(vertexBuffer, vertexBufferUsed, depthEnabled);
+        g_renderInterface->drawPointList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
         break;
     case DrawModeLines :
-        renderIface->drawLineList(vertexBuffer, vertexBufferUsed, depthEnabled);
+        g_renderInterface->drawLineList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
         break;
     case DrawModeText :
-        renderIface->drawGlyphList(vertexBuffer, vertexBufferUsed, glyphTex);
+        g_renderInterface->drawGlyphList(g_vertexBuffer, g_vertexBufferUsed, g_glyphTex);
         break;
     } // switch (mode)
 
-    vertexBufferUsed = 0;
+    g_vertexBufferUsed = 0;
 }
 
 void pushPointVert(const DebugPoint & point)
 {
     // Make room for one more vert:
-    if ((vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((g_vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
         flushDebugVerts(DrawModePoints, point.depthEnabled);
     }
 
-    DrawVertex & v = vertexBuffer[vertexBufferUsed++];
+    DrawVertex & v = g_vertexBuffer[g_vertexBufferUsed++];
     v.point.x    = point.position[X];
     v.point.y    = point.position[Y];
     v.point.z    = point.position[Z];
@@ -1103,13 +1103,13 @@ void pushPointVert(const DebugPoint & point)
 void pushLineVert(const DebugLine & line)
 {
     // Make room for two more verts:
-    if ((vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((g_vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
         flushDebugVerts(DrawModeLines, line.depthEnabled);
     }
 
-    DrawVertex & v0 = vertexBuffer[vertexBufferUsed++];
-    DrawVertex & v1 = vertexBuffer[vertexBufferUsed++];
+    DrawVertex & v0 = g_vertexBuffer[g_vertexBufferUsed++];
+    DrawVertex & v1 = g_vertexBuffer[g_vertexBufferUsed++];
 
     v0.line.x = line.posFrom[X];
     v0.line.y = line.posFrom[Y];
@@ -1131,14 +1131,14 @@ void pushGlyphVerts(const DrawVertex verts[4])
     static const int indexes[6] = { 0, 1, 2, 2, 1, 3 }; // A CCW winding triangle.
 
     // Make room for one more glyph (2 tris):
-    if ((vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((g_vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
         flushDebugVerts(DrawModeText, false);
     }
 
     for (int i = 0; i < 6; ++i)
     {
-        vertexBuffer[vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
+        g_vertexBuffer[g_vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
     }
 }
 
@@ -1243,14 +1243,14 @@ float calcTextWidth(const char * text, const float scaling)
 
 void drawDebugStrings()
 {
-    if (debugStringsCount == 0)
+    if (g_debugStringsCount == 0)
     {
         return;
     }
 
-    for (int i = 0; i < debugStringsCount; ++i)
+    for (int i = 0; i < g_debugStringsCount; ++i)
     {
-        const DebugString & dstr = debugStrings[i];
+        const DebugString & dstr = g_debugStrings[i];
         if (dstr.centered)
         {
             // 3D Labels are centered at the point of origin, e.g. center-aligned.
@@ -1269,7 +1269,7 @@ void drawDebugStrings()
 
 void drawDebugPoints()
 {
-    if (debugPointsCount == 0)
+    if (g_debugPointsCount == 0)
     {
         return;
     }
@@ -1278,9 +1278,9 @@ void drawDebugPoints()
     // First pass, points with depth test ENABLED:
     //
     int numDepthlessPoints = 0;
-    for (int i = 0; i < debugPointsCount; ++i)
+    for (int i = 0; i < g_debugPointsCount; ++i)
     {
-        const DebugPoint & point = debugPoints[i];
+        const DebugPoint & point = g_debugPoints[i];
         if (point.depthEnabled)
         {
             pushPointVert(point);
@@ -1294,9 +1294,9 @@ void drawDebugPoints()
     //
     if (numDepthlessPoints > 0)
     {
-        for (int i = 0; i < debugPointsCount; ++i)
+        for (int i = 0; i < g_debugPointsCount; ++i)
         {
-            const DebugPoint & point = debugPoints[i];
+            const DebugPoint & point = g_debugPoints[i];
             if (!point.depthEnabled)
             {
                 pushPointVert(point);
@@ -1308,7 +1308,7 @@ void drawDebugPoints()
 
 void drawDebugLines()
 {
-    if (debugLinesCount == 0)
+    if (g_debugLinesCount == 0)
     {
         return;
     }
@@ -1317,9 +1317,9 @@ void drawDebugLines()
     // First pass, lines with depth test ENABLED:
     //
     int numDepthlessLines = 0;
-    for (int i = 0; i < debugLinesCount; ++i)
+    for (int i = 0; i < g_debugLinesCount; ++i)
     {
-        const DebugLine & line = debugLines[i];
+        const DebugLine & line = g_debugLines[i];
         if (line.depthEnabled)
         {
             pushLineVert(line);
@@ -1333,9 +1333,9 @@ void drawDebugLines()
     //
     if (numDepthlessLines > 0)
     {
-        for (int i = 0; i < debugLinesCount; ++i)
+        for (int i = 0; i < g_debugLinesCount; ++i)
         {
-            const DebugLine & line = debugLines[i];
+            const DebugLine & line = g_debugLines[i];
             if (!line.depthEnabled)
             {
                 pushLineVert(line);
@@ -1348,7 +1348,7 @@ void drawDebugLines()
 template<class T>
 void clearDebugQueue(T * queue, int & queueCount)
 {
-    if (currentTimeMillis == 0)
+    if (g_currentTimeMillis == 0)
     {
         queueCount = 0;
         return;
@@ -1360,7 +1360,7 @@ void clearDebugQueue(T * queue, int & queueCount)
     // Concatenate elements that still need to be draw on future frames:
     for (int i = 0; i < queueCount; ++i, ++pElem)
     {
-        if (pElem->expiryDateMillis > currentTimeMillis)
+        if (pElem->expiryDateMillis > g_currentTimeMillis)
         {
             if (index != i)
             {
@@ -1408,15 +1408,15 @@ int rleDecode(unsigned char * output, const int outSizeBytes,
 
 void setupGlyphTexture()
 {
-    if (renderIface == DD_NULL)
+    if (g_renderInterface == DD_NULL)
     {
         return;
     }
 
-    if (glyphTex != DD_NULL)
+    if (g_glyphTex != DD_NULL)
     {
-        renderIface->destroyGlyphTexture(glyphTex);
-        glyphTex = DD_NULL;
+        g_renderInterface->destroyGlyphTexture(g_glyphTex);
+        g_glyphTex = DD_NULL;
     }
 
     const int decompressedSize = DD_FONT_CHAR_SET.bitmapDecompressSize;
@@ -1436,7 +1436,7 @@ void setupGlyphTexture()
         return;
     }
 
-    glyphTex = renderIface->createGlyphTexture(
+    g_glyphTex = g_renderInterface->createGlyphTexture(
                     DD_FONT_CHAR_SET.bitmapWidth,
                     DD_FONT_CHAR_SET.bitmapHeight,
                     decompressedBitmap);
@@ -1453,17 +1453,17 @@ void setupGlyphTexture()
 
 void initialize(RenderInterface * renderer)
 {
-    if (renderIface != DD_NULL) // Reinitializing?
+    if (g_renderInterface != DD_NULL) // Reinitializing?
     {
         shutdown(); // Shutdown first.
     }
 
-    renderIface = renderer;
-    currentTimeMillis = 0;
-    vertexBufferUsed  = 0;
-    debugStringsCount = 0;
-    debugPointsCount  = 0;
-    debugLinesCount   = 0;
+    g_renderInterface = renderer;
+    g_currentTimeMillis = 0;
+    g_vertexBufferUsed  = 0;
+    g_debugStringsCount = 0;
+    g_debugPointsCount  = 0;
+    g_debugLinesCount   = 0;
 
     setupGlyphTexture();
 }
@@ -1473,7 +1473,7 @@ void shutdown()
     //
     // If this macro is defined, the user-provided ddStr type
     // needs some extra cleanup before shutdown, so we run for
-    // all entries in the debugStrings[] array.
+    // all entries in the g_debugStrings[] array.
     //
     // We could call std::string::clear() here, but clear()
     // doesn't deallocate memory in std string, so we might
@@ -1481,24 +1481,24 @@ void shutdown()
     // when using the default (AKA std::string) ddStr.
     //
     #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(debugStrings); ++i)
+    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(debugStrings[i].text);
+        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
     }
     #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
 
-    if (renderIface != DD_NULL && glyphTex != DD_NULL)
+    if (g_renderInterface != DD_NULL && g_glyphTex != DD_NULL)
     {
-        renderIface->destroyGlyphTexture(glyphTex);
-        glyphTex = DD_NULL;
+        g_renderInterface->destroyGlyphTexture(g_glyphTex);
+        g_glyphTex = DD_NULL;
     }
 
-    renderIface = DD_NULL;
+    g_renderInterface = DD_NULL;
 }
 
 bool hasPendingDraws()
 {
-    return (debugStringsCount + debugPointsCount + debugLinesCount) > 0;
+    return (g_debugStringsCount + g_debugPointsCount + g_debugLinesCount) > 0;
 }
 
 void flush(const ddI64 currTimeMillis, const int flags)
@@ -1511,10 +1511,10 @@ void flush(const ddI64 currTimeMillis, const int flags)
     }
 
     // Save the last know time value for next dd::line/dd::point calls.
-    currentTimeMillis = currTimeMillis;
+    g_currentTimeMillis = currTimeMillis;
 
     // Let the user set common render states...
-    renderIface->beginDraw();
+    g_renderInterface->beginDraw();
 
     // Issue the render calls:
     if (flags & FlushLines)  { drawDebugLines();   }
@@ -1522,12 +1522,12 @@ void flush(const ddI64 currTimeMillis, const int flags)
     if (flags & FlushText)   { drawDebugStrings(); }
 
     // And cleanup if needed...
-    renderIface->endDraw();
+    g_renderInterface->endDraw();
 
-    // Remove expired objects, regardless of draw flags:
-    clearDebugQueue(debugStrings, debugStringsCount);
-    clearDebugQueue(debugPoints,  debugPointsCount);
-    clearDebugQueue(debugLines,   debugLinesCount);
+    // Remove all expired objects, regardless of draw flags:
+    clearDebugQueue(g_debugStrings, g_debugStringsCount);
+    clearDebugQueue(g_debugPoints,  g_debugPointsCount);
+    clearDebugQueue(g_debugLines,   g_debugLinesCount);
 }
 
 void clear()
@@ -1536,30 +1536,30 @@ void clear()
 
     // Let the user cleanup the debug strings:
     #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(debugStrings); ++i)
+    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(debugStrings[i].text);
+        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
     }
     #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
 
-    vertexBufferUsed  = 0;
-    debugStringsCount = 0;
-    debugPointsCount  = 0;
-    debugLinesCount   = 0;
+    g_vertexBufferUsed  = 0;
+    g_debugStringsCount = 0;
+    g_debugPointsCount  = 0;
+    g_debugLinesCount   = 0;
 }
 
 void point(ddVec3Param pos, ddVec3Param color, const float size, const int durationMillis, const bool depthEnabled)
 {
     DD_CHECK_INIT;
 
-    if (debugPointsCount == DEBUG_DRAW_MAX_POINTS)
+    if (g_debugPointsCount == DEBUG_DRAW_MAX_POINTS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_POINTS limit reached! Dropping further debug point draws.");
         return;
     }
 
-    DebugPoint & point     = debugPoints[debugPointsCount++];
-    point.expiryDateMillis = currentTimeMillis + durationMillis;
+    DebugPoint & point     = g_debugPoints[g_debugPointsCount++];
+    point.expiryDateMillis = g_currentTimeMillis + durationMillis;
     point.depthEnabled     = depthEnabled;
     point.size             = size;
 
@@ -1571,14 +1571,14 @@ void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int duratio
 {
     DD_CHECK_INIT;
 
-    if (debugLinesCount == DEBUG_DRAW_MAX_LINES)
+    if (g_debugLinesCount == DEBUG_DRAW_MAX_LINES)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_LINES limit reached! Dropping further debug line draws.");
         return;
     }
 
-    DebugLine & line      = debugLines[debugLinesCount++];
-    line.expiryDateMillis = currentTimeMillis + durationMillis;
+    DebugLine & line      = g_debugLines[g_debugLinesCount++];
+    line.expiryDateMillis = g_currentTimeMillis + durationMillis;
     line.depthEnabled     = depthEnabled;
 
     vecCopy(line.posFrom, from);
@@ -1589,19 +1589,19 @@ void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int duratio
 void screenText(ddStrParam str, ddVec3Param pos, ddVec3Param color, const float scaling, const int durationMillis)
 {
     DD_CHECK_INIT;
-    if (glyphTex == DD_NULL)
+    if (g_glyphTex == DD_NULL)
     {
         return;
     }
 
-    if (debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
     }
 
-    DebugString & dstr    = debugStrings[debugStringsCount++];
-    dstr.expiryDateMillis = currentTimeMillis + durationMillis;
+    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
+    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
     dstr.posX             = pos[X];
     dstr.posY             = pos[Y];
     dstr.scaling          = scaling;
@@ -1615,12 +1615,12 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
                    const int durationMillis)
 {
     DD_CHECK_INIT;
-    if (glyphTex == DD_NULL)
+    if (g_glyphTex == DD_NULL)
     {
         return;
     }
 
-    if (debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
@@ -1645,10 +1645,10 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
 
     // Need to invert the direction because on OGL the screen origin is the bottom-left corner.
     // NOTE: This is not renderer agnostic, I think... Should add a #define or something!
-	scrY = static_cast<float>(sh) - scrY;
+    scrY = static_cast<float>(sh) - scrY;
 
-    DebugString & dstr    = debugStrings[debugStringsCount++];
-    dstr.expiryDateMillis = currentTimeMillis + durationMillis;
+    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
+    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
     dstr.posX             = scrX;
     dstr.posY             = scrY;
     dstr.scaling          = scaling;
@@ -2155,8 +2155,8 @@ GlyphTextureHandle RenderInterface::createGlyphTexture(int, int, const void *) {
  *
  * The following glyph bitmap is an RLE compressed graymap.
  */
-const int fontMonoid18BitmapSizeBytes = 16384;
-const unsigned char fontMonoid18Bitmap[] = { // ~16 KB
+const int g_fontMonoid18BitmapSizeBytes = 16384;
+const unsigned char g_fontMonoid18Bitmap[] = { // ~16 KB
   0xFF, 0x00, 0xA1, 0x00, 0x02, 0xFF, 0x1A, 0x00, 0x01, 0xFF, 0x01, 0xFE, 0x01, 0xE5, 0x28,
   0x00, 0x01, 0xF9, 0x01, 0xFF, 0x01, 0xF0, 0x0A, 0x00, 0x02, 0xFF, 0x31, 0x00, 0x03, 0xFF,
   0x50, 0x00, 0x03, 0xFF, 0x23, 0x00, 0x01, 0xF8, 0x01, 0xFE, 0x01, 0xFF, 0x19, 0x00, 0x01,
@@ -3251,8 +3251,8 @@ const unsigned char fontMonoid18Bitmap[] = { // ~16 KB
   0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00,
   0xFF, 0x00, 0xFF, 0x00 };
 
-const FontCharSet fontMonoid18CharSet = {
-  /* bitmap               = */ fontMonoid18Bitmap,
+const FontCharSet g_fontMonoid18CharSet = {
+  /* bitmap               = */ g_fontMonoid18Bitmap,
   /* bitmapWidth          = */ 256,
   /* bitmapHeight         = */ 256,
   /* bitmapColorChannels  = */ 1,
