@@ -1,7 +1,7 @@
 
 ### Debug Draw Samples
 
-Three sample programs showing basic usage of the Debug Draw library are provided:
+Three sample programs showing basic usage of the Debug Draw library are currently provided:
 
 - `sample_null_renderer.cpp`: Just a tiny `main()` that calls a couple functions and exists.
   This sample is meant to test if the library will compile without errors.
@@ -23,7 +23,7 @@ The only external dependency to build the samples is [GLFW](http://www.glfw.org/
 it before attempting to build them. [GL3W](https://github.com/skaslev/gl3w) is our extension wrangler
 for the core GL sample. It is included here and builds with it. Sony's Vectormath library is also
 a dependency, but it is included as well. Those libraries are only required for the samples and
-not by Draw Draw.
+not by Debug Draw itself.
 
 The samples have only been officially tested on Mac OSX, though should build fine on Linux if you have GLFW
 installed properly. Running them requires at least OpenGL v3.2, but due to hardware differences
@@ -32,5 +32,5 @@ account for GL version and hardware differences, so the samples might not run pr
 
 The main idea is that they serve as a rough guide on how to integrate Debug Draw into your own projects,
 so there's more value in the code itself than in the demo applications, which are just drawing some line
-shapes in the 3D world and text, nothing more.
+shapes in the 3D world and HUD text, nothing more.
 
