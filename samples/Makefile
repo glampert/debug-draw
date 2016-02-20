@@ -42,7 +42,7 @@ endif
 
 LIBRARIES = $(OPENGL_LIB) $(GLFW_LIB)
 INC_DIRS  = -I. -I.. -Ivectormath -Igl3w/include
-CXXFLAGS += $(INC_DIRS) -O2 -Wall -Wextra -Winit-self -Wunused -Wshadow
+CXXFLAGS += $(INC_DIRS) -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
 CFLAGS    = $(CXXFLAGS)
 
 SRC_FILES_GL_LEGACY_SAMP  = sample_gl_legacy.cpp

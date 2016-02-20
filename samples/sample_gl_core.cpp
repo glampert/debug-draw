@@ -87,7 +87,8 @@ static const char * textFragShaderSrc = "\n"
 "\n"
 "void main()\n"
 "{\n"
-"    out_FragColor = v_Color * texture(u_glyphTexture, v_TexCoords).rrrr;\n"
+"    out_FragColor = v_Color;\n"
+"    out_FragColor.a = texture(u_glyphTexture, v_TexCoords).r;\n"
 "}\n";
 
 // ========================================================
