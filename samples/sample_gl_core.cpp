@@ -104,8 +104,7 @@ public:
     // dd::RenderInterface overrides:
     //
 
-    void drawPointList(const dd::DrawVertex * points, const int count,
-                       const bool depthEnabled) OVERRIDE_METHOD
+    void drawPointList(const dd::DrawVertex * points, int count, bool depthEnabled) OVERRIDE_METHOD
     {
         assert(points != NULLPTR);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
@@ -138,8 +137,7 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    void drawLineList(const dd::DrawVertex * lines, const int count,
-                      const bool depthEnabled) OVERRIDE_METHOD
+    void drawLineList(const dd::DrawVertex * lines, int count, bool depthEnabled) OVERRIDE_METHOD
     {
         assert(lines != NULLPTR);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
@@ -172,8 +170,7 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    void drawGlyphList(const dd::DrawVertex * glyphs, const int count,
-                       dd::GlyphTextureHandle glyphTex) OVERRIDE_METHOD
+    void drawGlyphList(const dd::DrawVertex * glyphs, int count, dd::GlyphTextureHandle glyphTex) OVERRIDE_METHOD
     {
         assert(glyphs != NULLPTR);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
@@ -183,7 +180,9 @@ public:
 
         // These doesn't have to be reset every draw call, I'm just being lazy ;)
         glUniform1i(textProgram_GlyphTextureLocation, 0);
-        glUniform2f(textProgram_ScreenDimensions, windowWidth, windowHeight);
+        glUniform2f(textProgram_ScreenDimensions,
+                    static_cast<GLfloat>(windowWidth),
+                    static_cast<GLfloat>(windowHeight));
 
         if (glyphTex != NULLPTR)
         {
@@ -208,8 +207,7 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    dd::GlyphTextureHandle createGlyphTexture(const int width, const int height,
-                                              const void * pixels) OVERRIDE_METHOD
+    dd::GlyphTextureHandle createGlyphTexture(int width, int height, const void * pixels) OVERRIDE_METHOD
     {
         assert(width > 0 && height > 0);
         assert(pixels != NULLPTR);
@@ -785,9 +783,16 @@ static void sampleAppStart()
     // Loop until the user closes the window:
     while (!glfwWindowShouldClose(window))
     {
+        const double t0s = glfwGetTime();
+
         sampleAppDraw(ddRenderIfaceGL);
         glfwSwapBuffers(window);
         glfwPollEvents();
+
+        const double t1s = glfwGetTime();
+
+        deltaTime.seconds      = static_cast<float>(t1s - t0s);
+        deltaTime.milliseconds = static_cast<long long>(deltaTime.seconds * 1000.0);
     }
 
     dd::shutdown();

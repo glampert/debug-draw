@@ -1252,7 +1252,7 @@ struct LzwBitStreamReader
     int numBitsRead;      // Total bits read from the stream so far. Never includes byte-rounding.
 
     LzwBitStreamReader(const UByte * bitStream, int byteCount, int bitCount);
-    bool readNextBit(bool & bitOut);
+    bool readNextBit(int & outBit);
     int readBits(int bitCount);
 };
 
@@ -1330,7 +1330,7 @@ LzwBitStreamReader::LzwBitStreamReader(const UByte * bitStream, const int byteCo
     , numBitsRead(0)
 { }
 
-bool LzwBitStreamReader::readNextBit(bool & bitOut)
+bool LzwBitStreamReader::readNextBit(int & outBit)
 {
     if (numBitsRead >= sizeInBits)
     {
@@ -1338,7 +1338,7 @@ bool LzwBitStreamReader::readNextBit(bool & bitOut)
     }
 
     const int mask = 1 << nextBitPos;
-    bitOut = !!(stream[currBytePos] & mask);
+    outBit = !!(stream[currBytePos] & mask);
     ++numBitsRead;
 
     if (++nextBitPos == 8)
@@ -1354,7 +1354,7 @@ int LzwBitStreamReader::readBits(const int bitCount)
     int num = 0;
     for (int b = 0; b < bitCount; ++b)
     {
-        bool bit;
+        int bit;
         if (!readNextBit(bit))
         {
             break;
@@ -1386,8 +1386,9 @@ bool lzwOutputSequence(const LzwDictionary & dict, int code,
     // it to a temp then output the buffer in reverse.
     int i = 0;
     UByte sequence[LzwMaxDictEntries];
-    do {
-        sequence[i++] = dict.entries[code].value;
+    do
+    {
+        sequence[i++] = dict.entries[code].value & 0xFF;
         code = dict.entries[code].code;
     } while (code >= 0);
 
@@ -1919,10 +1920,10 @@ void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, co
 {
     // Invariants for all characters:
     const float initialX    = x;
-    const float scaleU      = getFontCharSet().bitmapWidth;
-    const float scaleV      = getFontCharSet().bitmapHeight;
-    const float fixedWidth  = getFontCharSet().charWidth;
-    const float fixedHeight = getFontCharSet().charHeight;
+    const float scaleU      = static_cast<float>(getFontCharSet().bitmapWidth);
+    const float scaleV      = static_cast<float>(getFontCharSet().bitmapHeight);
+    const float fixedWidth  = static_cast<float>(getFontCharSet().charWidth);
+    const float fixedHeight = static_cast<float>(getFontCharSet().charHeight);
     const float tabW        = fixedWidth  * 4.0f * scaling; // TAB = 4 spaces.
     const float chrW        = fixedWidth  * scaling;
     const float chrH        = fixedHeight * scaling;
@@ -1994,7 +1995,7 @@ void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, co
 
 float calcTextWidth(const char * text, const float scaling)
 {
-    const float fixedWidth = getFontCharSet().charWidth;
+    const float fixedWidth = static_cast<float>(getFontCharSet().charWidth);
     const float tabW = fixedWidth * 4.0f * scaling; // TAB = 4 spaces.
     const float chrW = fixedWidth * scaling;
 

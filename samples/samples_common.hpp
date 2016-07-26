@@ -95,6 +95,12 @@ struct Mouse
     bool rightButtonDown;
 } mouse;
 
+struct Time
+{
+    float seconds;
+    long long milliseconds;
+} deltaTime;
+
 struct Camera
 {
     //
@@ -184,8 +190,7 @@ struct Camera
 
     void checkKeyboardMovement()
     {
-        static const float moveSpeed = 3.0f * (1.0f / 60.0f);
-
+        const float moveSpeed = 3.0f * deltaTime.seconds;
         if (keys.aDown) { move(Camera::Left,    moveSpeed); }
         if (keys.dDown) { move(Camera::Right,   moveSpeed); }
         if (keys.wDown) { move(Camera::Forward, moveSpeed); }
@@ -194,14 +199,15 @@ struct Camera
 
     void checkMouseRotation()
     {
-        static const float maxAngle    = 89.5f; // Max degrees of rotation
-        static const float rotateSpeed = 5.0f * (1.0f / 60.0f);
+        static const float maxAngle = 89.5f; // Max degrees of rotation
         static float pitchAmt;
 
         if (!mouse.leftButtonDown)
         {
             return;
         }
+
+        const float rotateSpeed = 6.0f * deltaTime.seconds;
 
         // Rotate left/right:
         float amt = static_cast<float>(mouse.deltaX) * rotateSpeed;
