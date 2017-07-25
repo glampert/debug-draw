@@ -327,7 +327,7 @@
 
 namespace dd
 {
-
+	class RenderContext;
 // ========================================================
 // Debug Draw functions:
 // Durations are always in milliseconds.
@@ -343,7 +343,8 @@ void point(ddVec3Param pos,
            ddVec3Param color,
            float size = 1.0f,
            int durationMillis = 0,
-           bool depthEnabled = true);
+           bool depthEnabled = true, 
+           RenderContext * ctx = 0);
 
 // Add a 3D line to the debug draw queue. Note that
 // lines are expressed in world coordinates, and so are
@@ -352,7 +353,8 @@ void line(ddVec3Param from,
           ddVec3Param to,
           ddVec3Param color,
           int durationMillis = 0,
-          bool depthEnabled = true);
+          bool depthEnabled = true, 
+          RenderContext * ctx = 0);
 
 // Add a 2D text string as an overlay to the current view, using a built-in font.
 // Position is in screen-space pixels, origin at the top-left corner of the screen.
@@ -362,7 +364,8 @@ void screenText(ddStrParam str,
                 ddVec3Param pos,
                 ddVec3Param color,
                 float scaling = 1.0f,
-                int durationMillis = 0);
+                int durationMillis = 0, 
+                RenderContext * ctx = 0);
 
 // Add a 3D text label centered at the given world position that
 // gets projected to screen-space. The label always faces the viewer.
@@ -375,14 +378,16 @@ void projectedText(ddStrParam str,
                    int sx, int sy,
                    int sw, int sh,
                    float scaling = 1.0f,
-                   int durationMillis = 0);
+                   int durationMillis = 0, 
+                   RenderContext * ctx = 0);
 
 // Add a set of three coordinate axis depicting the position and orientation of the given transform.
 // 'size' defines the size of the arrow heads. 'length' defines the length of the arrow's base line.
 void axisTriad(ddMat4x4Param transform,
                float size, float length,
                int durationMillis = 0,
-               bool depthEnabled = true);
+               bool depthEnabled = true, 
+               RenderContext * ctx = 0);
 
 // Add a 3D line with an arrow-like end to the debug draw queue.
 // 'size' defines the arrow head size. 'from' and 'to' the length of the arrow's base line.
@@ -391,7 +396,8 @@ void arrow(ddVec3Param from,
            ddVec3Param color,
            float size,
            int durationMillis = 0,
-           bool depthEnabled = true);
+           bool depthEnabled = true, 
+           RenderContext * ctx = 0);
 
 // Add an axis-aligned cross (3 lines converging at a point) to the debug draw queue.
 // 'length' defines the length of the crossing lines.
@@ -399,7 +405,8 @@ void arrow(ddVec3Param from,
 void cross(ddVec3Param center,
            float length,
            int durationMillis = 0,
-           bool depthEnabled = true);
+           bool depthEnabled = true, 
+           RenderContext * ctx = 0);
 
 // Add a wireframe circle to the debug draw queue.
 void circle(ddVec3Param center,
@@ -408,7 +415,8 @@ void circle(ddVec3Param center,
             float radius,
             float numSteps,
             int durationMillis = 0,
-            bool depthEnabled = true);
+            bool depthEnabled = true, 
+            RenderContext * ctx = 0);
 
 // Add a wireframe plane in 3D space to the debug draw queue.
 // If 'normalVecScale' is not zero, a line depicting the plane normal is also draw.
@@ -419,14 +427,16 @@ void plane(ddVec3Param center,
            float planeScale,
            float normalVecScale,
            int durationMillis = 0,
-           bool depthEnabled = true);
+           bool depthEnabled = true, 
+           RenderContext * ctx = 0);
 
 // Add a wireframe sphere to the debug draw queue.
 void sphere(ddVec3Param center,
             ddVec3Param color,
             float radius,
             int durationMillis = 0,
-            bool depthEnabled = true);
+            bool depthEnabled = true, 
+            RenderContext * ctx = 0);
 
 // Add a wireframe cone to the debug draw queue.
 // The cone 'apex' is the point where all lines meet.
@@ -438,13 +448,15 @@ void cone(ddVec3Param apex,
           float baseRadius,
           float apexRadius,
           int durationMillis = 0,
-          bool depthEnabled = true);
+          bool depthEnabled = true, 
+          RenderContext * ctx = 0);
 
 // Wireframe box from the eight points that define it.
 void box(const ddVec3 points[8],
          ddVec3Param color,
          int durationMillis = 0,
-         bool depthEnabled = true);
+         bool depthEnabled = true, 
+         RenderContext * ctx = 0);
 
 // Add a wireframe box to the debug draw queue.
 void box(ddVec3Param center,
@@ -453,14 +465,16 @@ void box(ddVec3Param center,
          float height,
          float depth,
          int durationMillis = 0,
-         bool depthEnabled = true);
+         bool depthEnabled = true, 
+         RenderContext * ctx = 0);
 
 // Add a wireframe Axis Aligned Bounding Box (AABB) to the debug draw queue.
 void aabb(ddVec3Param mins,
           ddVec3Param maxs,
           ddVec3Param color,
           int durationMillis = 0,
-          bool depthEnabled = true);
+          bool depthEnabled = true, 
+          RenderContext * ctx = 0);
 
 // Add a wireframe frustum pyramid to the debug draw queue.
 // 'invClipMatrix' is the inverse of the matrix defining the frustum
@@ -469,7 +483,8 @@ void aabb(ddVec3Param mins,
 void frustum(ddMat4x4Param invClipMatrix,
              ddVec3Param color,
              int durationMillis = 0,
-             bool depthEnabled = true);
+             bool depthEnabled = true, 
+             RenderContext * ctx = 0);
 
 // Add a vertex normal for debug visualization.
 // The normal vector 'normal' is assumed to be already normalized.
@@ -477,7 +492,8 @@ void vertexNormal(ddVec3Param origin,
                   ddVec3Param normal,
                   float length,
                   int durationMillis = 0,
-                  bool depthEnabled = true);
+                  bool depthEnabled = true, 
+                  RenderContext * ctx = 0);
 
 // Add a "tangent basis" at a given point in world space.
 // Color scheme used is: normal=WHITE, tangent=YELLOW, bi-tangent=MAGENTA.
@@ -488,7 +504,8 @@ void tangentBasis(ddVec3Param origin,
                   ddVec3Param bitangent,
                   float lengths,
                   int durationMillis = 0,
-                  bool depthEnabled = true);
+                  bool depthEnabled = true, 
+                  RenderContext * ctx = 0);
 
 // Makes a 3D square grid of lines along the X and Z planes.
 // 'y' defines the height in the Y axis where the grid is placed.
@@ -498,7 +515,8 @@ void xzSquareGrid(float mins, float maxs,
                   float y,    float step,
                   ddVec3Param color,
                   int durationMillis = 0,
-                  bool depthEnabled = true);
+                  bool depthEnabled = true, 
+                  RenderContext * ctx = 0);
 
 // ========================================================
 // Debug Draw vertex type:
@@ -579,6 +597,16 @@ public:
     virtual ~RenderInterface() = 0;
 };
 
+class RenderContext
+{
+public:
+	static RenderContext * alloc();
+	static void free(RenderContext *);
+private:
+	RenderContext();
+	~RenderContext();
+};
+
 // ========================================================
 // Housekeeping functions:
 // ========================================================
@@ -596,25 +624,25 @@ enum FlushFlags
 // Given object must remain valid until after dd::shutdown() is called!
 // If 'renderer' is null, the Debug Draw functions become no-ops, but
 // can still be safely called.
-void initialize(RenderInterface * renderer);
+void initialize(RenderInterface * renderer, RenderContext * ctx=0);
 
 // After this is called, it is safe to dispose the RenderInterface instance
 // you passed to dd::initialize(). Shutdown will also attempt to free the glyph texture.
-void shutdown();
+void shutdown(RenderContext * ctx=0);
 
 // Test if there's data in the debug draw queue and dd::flush() should be called.
-bool hasPendingDraws();
+bool hasPendingDraws(RenderContext * ctx=0);
 
 // Actually calls the RenderInterface to consume the debug draw queues.
 // Objects that have expired their lifetimes get removed.
 // Pass the current application time in milliseconds to remove
 // timed objects that have expired. Passing zero removes all
 // objects after they get drawn, regardless of lifetime.
-void flush(ddI64 currTimeMillis, int flags = FlushAll);
+void flush(ddI64 currTimeMillis, int flags = FlushAll, RenderContext * ctx=0);
 
 // Manually removes all queued debug render data without drawing.
 // This is not normally called. To draw stuff, call dd::flush() instead.
-void clear();
+void clear(RenderContext * ctx=0);
 
 } // namespace dd {}
 
@@ -716,7 +744,7 @@ void clear();
 #define DD_TAU              (DD_PI * 2.0f)
 #define DD_DEG2RAD(degrees) (static_cast<float>(degrees) * DD_PI / 180.0f)
 #define DD_ARRAY_LEN(arr)   (static_cast<int>(sizeof(arr) / sizeof((arr)[0])))
-#define DD_CHECK_INIT       if (g_renderInterface == DD_NULL) { return; }
+#define DD_CHECK_INIT(ctx)  if (ctx.renderInterface == DD_NULL) { return; }
 
 namespace dd
 {
@@ -1570,30 +1598,45 @@ struct DebugLine
     bool   depthEnabled;
 };
 
-// Debug strings queue (2D screen-space strings + 3D projected labels):
-static int g_debugStringsCount = 0;
-static DebugString g_debugStrings[DEBUG_DRAW_MAX_STRINGS];
+struct InternalContext
+{
+	InternalContext()
+	{
+		debugStringsCount = 0;
+		debugPointsCount = 0;
+		debugLinesCount = 0;
+		vertexBufferUsed = 0;
+		currentTimeMillis = 0;
+		renderInterface = DD_NULL;
+		glyphTex = DD_NULL;
+	}
+	// Debug strings queue (2D screen-space strings + 3D projected labels):
+	int debugStringsCount;
+	DebugString debugStrings[DEBUG_DRAW_MAX_STRINGS];
 
-// 3D debug points queue:
-static int g_debugPointsCount = 0;
-static DebugPoint g_debugPoints[DEBUG_DRAW_MAX_POINTS];
+	// 3D debug points queue:
+	int debugPointsCount;
+	DebugPoint debugPoints[DEBUG_DRAW_MAX_POINTS];
 
-// 3D debug lines queue:
-static int g_debugLinesCount = 0;
-static DebugLine g_debugLines[DEBUG_DRAW_MAX_LINES];
+	// 3D debug lines queue:
+	int debugLinesCount;
+	DebugLine debugLines[DEBUG_DRAW_MAX_LINES];
 
-// Temporary vertex buffer we use to expand the lines/points before calling on RenderInterface.
-static int g_vertexBufferUsed = 0;
-static DrawVertex g_vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE];
+	// Temporary vertex buffer we use to expand the lines/points before calling on RenderInterface.
+	int vertexBufferUsed;
+	DrawVertex vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE];
 
-// Latest time value (in milliseconds) from dd::flush().
-static ddI64 g_currentTimeMillis = 0;
+	// Latest time value (in milliseconds) from dd::flush().
+	ddI64 currentTimeMillis;
 
-// Ref to the external renderer. Can be null for a no-op debug draw.
-static RenderInterface * g_renderInterface = DD_NULL;
+	// Ref to the external renderer. Can be null for a no-op debug draw.
+	RenderInterface* renderInterface;
 
-// Our built-in glyph bitmap. If kept null, no text is rendered.
-static GlyphTextureHandle g_glyphTex = DD_NULL;
+	// Our built-in glyph bitmap. If kept null, no text is rendered.
+	GlyphTextureHandle glyphTex;
+};
+
+InternalContext* GlobalContext() { static InternalContext ctx; return &ctx; }
 
 // ========================================================
 // Fast approximations of math functions used by DD.
@@ -1833,9 +1876,9 @@ enum DrawMode
     DrawModeText
 };
 
-void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
+void flushDebugVerts(const DrawMode mode, const bool depthEnabled, InternalContext& ctx)
 {
-    if (g_vertexBufferUsed == 0)
+    if (ctx.vertexBufferUsed == 0)
     {
         return;
     }
@@ -1843,28 +1886,28 @@ void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
     switch (mode)
     {
     case DrawModePoints :
-        g_renderInterface->drawPointList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
+        ctx.renderInterface->drawPointList(ctx.vertexBuffer, ctx.vertexBufferUsed, depthEnabled);
         break;
     case DrawModeLines :
-        g_renderInterface->drawLineList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
+        ctx.renderInterface->drawLineList(ctx.vertexBuffer, ctx.vertexBufferUsed, depthEnabled);
         break;
     case DrawModeText :
-        g_renderInterface->drawGlyphList(g_vertexBuffer, g_vertexBufferUsed, g_glyphTex);
+        ctx.renderInterface->drawGlyphList(ctx.vertexBuffer, ctx.vertexBufferUsed, ctx.glyphTex);
         break;
     } // switch (mode)
 
-    g_vertexBufferUsed = 0;
+    ctx.vertexBufferUsed = 0;
 }
 
-void pushPointVert(const DebugPoint & point)
+void pushPointVert(const DebugPoint & point, InternalContext& ctx)
 {
     // Make room for one more vert:
-    if ((g_vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((ctx.vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModePoints, point.depthEnabled);
+        flushDebugVerts(DrawModePoints, point.depthEnabled, ctx);
     }
 
-    DrawVertex & v = g_vertexBuffer[g_vertexBufferUsed++];
+    DrawVertex & v = ctx.vertexBuffer[ctx.vertexBufferUsed++];
     v.point.x    = point.position[X];
     v.point.y    = point.position[Y];
     v.point.z    = point.position[Z];
@@ -1874,16 +1917,16 @@ void pushPointVert(const DebugPoint & point)
     v.point.size = point.size;
 }
 
-void pushLineVert(const DebugLine & line)
+void pushLineVert(const DebugLine & line, InternalContext& ctx)
 {
     // Make room for two more verts:
-    if ((g_vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((ctx.vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModeLines, line.depthEnabled);
+        flushDebugVerts(DrawModeLines, line.depthEnabled, ctx);
     }
 
-    DrawVertex & v0 = g_vertexBuffer[g_vertexBufferUsed++];
-    DrawVertex & v1 = g_vertexBuffer[g_vertexBufferUsed++];
+    DrawVertex & v0 = ctx.vertexBuffer[ctx.vertexBufferUsed++];
+    DrawVertex & v1 = ctx.vertexBuffer[ctx.vertexBufferUsed++];
 
     v0.line.x = line.posFrom[X];
     v0.line.y = line.posFrom[Y];
@@ -1900,23 +1943,23 @@ void pushLineVert(const DebugLine & line)
     v1.line.b = line.color[Z];
 }
 
-void pushGlyphVerts(const DrawVertex verts[4])
+void pushGlyphVerts(const DrawVertex verts[4], InternalContext& ctx)
 {
     static const int indexes[6] = { 0, 1, 2, 2, 1, 3 };
 
     // Make room for one more glyph (2 tris):
-    if ((g_vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((ctx.vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModeText, false);
+        flushDebugVerts(DrawModeText, false, ctx);
     }
 
     for (int i = 0; i < 6; ++i)
     {
-        g_vertexBuffer[g_vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
+        ctx.vertexBuffer[ctx.vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
     }
 }
 
-void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, const float scaling)
+void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, const float scaling, InternalContext& ctx)
 {
     // Invariants for all characters:
     const float initialX    = x;
@@ -1988,7 +2031,7 @@ void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, co
         verts[3].glyph.g = color[Y];
         verts[3].glyph.b = color[Z];
 
-        pushGlyphVerts(verts);
+        pushGlyphVerts(verts, ctx);
         x += chrW;
     }
 }
@@ -2016,35 +2059,35 @@ float calcTextWidth(const char * text, const float scaling)
     return x;
 }
 
-void drawDebugStrings()
+void drawDebugStrings(InternalContext& ctx)
 {
-    if (g_debugStringsCount == 0)
+    if (ctx.debugStringsCount == 0)
     {
         return;
     }
 
-    for (int i = 0; i < g_debugStringsCount; ++i)
+    for (int i = 0; i < ctx.debugStringsCount; ++i)
     {
-        const DebugString & dstr = g_debugStrings[i];
+        const DebugString & dstr = ctx.debugStrings[i];
         if (dstr.centered)
         {
             // 3D Labels are centered at the point of origin, e.g. center-aligned.
             const float offset = calcTextWidth(dstr.text.c_str(), dstr.scaling) * 0.5f;
-            pushStringGlyphs(dstr.posX - offset, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
+            pushStringGlyphs(dstr.posX - offset, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling, ctx);
         }
         else
         {
             // Left-aligned
-            pushStringGlyphs(dstr.posX, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
+            pushStringGlyphs(dstr.posX, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling, ctx);
         }
     }
 
-    flushDebugVerts(DrawModeText, false);
+    flushDebugVerts(DrawModeText, false, ctx);
 }
 
-void drawDebugPoints()
+void drawDebugPoints(InternalContext& ctx)
 {
-    if (g_debugPointsCount == 0)
+    if (ctx.debugPointsCount == 0)
     {
         return;
     }
@@ -2053,37 +2096,37 @@ void drawDebugPoints()
     // First pass, points with depth test ENABLED:
     //
     int numDepthlessPoints = 0;
-    for (int i = 0; i < g_debugPointsCount; ++i)
+    for (int i = 0; i < ctx.debugPointsCount; ++i)
     {
-        const DebugPoint & point = g_debugPoints[i];
+        const DebugPoint & point = ctx.debugPoints[i];
         if (point.depthEnabled)
         {
-            pushPointVert(point);
+            pushPointVert(point, ctx);
         }
         numDepthlessPoints += !point.depthEnabled;
     }
-    flushDebugVerts(DrawModePoints, true);
+    flushDebugVerts(DrawModePoints, true, ctx);
 
     //
     // Second pass draws points with depth DISABLED:
     //
     if (numDepthlessPoints > 0)
     {
-        for (int i = 0; i < g_debugPointsCount; ++i)
+        for (int i = 0; i < ctx.debugPointsCount; ++i)
         {
-            const DebugPoint & point = g_debugPoints[i];
+            const DebugPoint & point = ctx.debugPoints[i];
             if (!point.depthEnabled)
             {
-                pushPointVert(point);
+                pushPointVert(point, ctx);
             }
         }
-        flushDebugVerts(DrawModePoints, false);
+        flushDebugVerts(DrawModePoints, false, ctx);
     }
 }
 
-void drawDebugLines()
+void drawDebugLines(InternalContext& ctx)
 {
-    if (g_debugLinesCount == 0)
+    if (ctx.debugLinesCount == 0)
     {
         return;
     }
@@ -2092,38 +2135,38 @@ void drawDebugLines()
     // First pass, lines with depth test ENABLED:
     //
     int numDepthlessLines = 0;
-    for (int i = 0; i < g_debugLinesCount; ++i)
+    for (int i = 0; i < ctx.debugLinesCount; ++i)
     {
-        const DebugLine & line = g_debugLines[i];
+        const DebugLine & line = ctx.debugLines[i];
         if (line.depthEnabled)
         {
-            pushLineVert(line);
+            pushLineVert(line, ctx);
         }
         numDepthlessLines += !line.depthEnabled;
     }
-    flushDebugVerts(DrawModeLines, true);
+    flushDebugVerts(DrawModeLines, true, ctx);
 
     //
     // Second pass draws lines with depth DISABLED:
     //
     if (numDepthlessLines > 0)
     {
-        for (int i = 0; i < g_debugLinesCount; ++i)
+        for (int i = 0; i < ctx.debugLinesCount; ++i)
         {
-            const DebugLine & line = g_debugLines[i];
+            const DebugLine & line = ctx.debugLines[i];
             if (!line.depthEnabled)
             {
-                pushLineVert(line);
+                pushLineVert(line, ctx);
             }
         }
-        flushDebugVerts(DrawModeLines, false);
+        flushDebugVerts(DrawModeLines, false, ctx);
     }
 }
 
 template<typename T>
-void clearDebugQueue(T * queue, int & queueCount)
+void clearDebugQueue(T * queue, int & queueCount, InternalContext& ctx)
 {
-    if (g_currentTimeMillis == 0)
+    if (ctx.currentTimeMillis == 0)
     {
         queueCount = 0;
         return;
@@ -2135,7 +2178,7 @@ void clearDebugQueue(T * queue, int & queueCount)
     // Concatenate elements that still need to be draw on future frames:
     for (int i = 0; i < queueCount; ++i, ++pElem)
     {
-        if (pElem->expiryDateMillis > g_currentTimeMillis)
+        if (pElem->expiryDateMillis > ctx.currentTimeMillis)
         {
             if (index != i)
             {
@@ -2148,17 +2191,17 @@ void clearDebugQueue(T * queue, int & queueCount)
     queueCount = index;
 }
 
-void setupGlyphTexture()
+void setupGlyphTexture(InternalContext& ctx)
 {
-    if (g_renderInterface == DD_NULL)
+    if (ctx.renderInterface == DD_NULL)
     {
         return;
     }
 
-    if (g_glyphTex != DD_NULL)
+    if (ctx.glyphTex != DD_NULL)
     {
-        g_renderInterface->destroyGlyphTexture(g_glyphTex);
-        g_glyphTex = DD_NULL;
+        ctx.renderInterface->destroyGlyphTexture(ctx.glyphTex);
+        ctx.glyphTex = DD_NULL;
     }
 
     UByte * decompressedBitmap = decompressFontBitmap();
@@ -2167,7 +2210,7 @@ void setupGlyphTexture()
         return; // Failed to decompressed. No font rendering available.
     }
 
-    g_glyphTex = g_renderInterface->createGlyphTexture(
+    ctx.glyphTex = ctx.renderInterface->createGlyphTexture(
                          getFontCharSet().bitmapWidth,
                          getFontCharSet().bitmapHeight,
                          decompressedBitmap);
@@ -2182,29 +2225,31 @@ void setupGlyphTexture()
 // Public Debug Draw interface:
 // ========================================================
 
-void initialize(RenderInterface * renderer)
+void initialize(RenderInterface * renderer, RenderContext* _ctx)
 {
-    if (g_renderInterface != DD_NULL) // Reinitializing?
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    if (ctx.renderInterface != DD_NULL) // Reinitializing?
     {
-        shutdown(); // Shutdown first.
+        shutdown(_ctx); // Shutdown first.
     }
 
-    g_renderInterface = renderer;
-    g_currentTimeMillis = 0;
-    g_vertexBufferUsed  = 0;
-    g_debugStringsCount = 0;
-    g_debugPointsCount  = 0;
-    g_debugLinesCount   = 0;
+    ctx.renderInterface = renderer;
+    ctx.currentTimeMillis = 0;
+    ctx.vertexBufferUsed  = 0;
+    ctx.debugStringsCount = 0;
+    ctx.debugPointsCount  = 0;
+    ctx.debugLinesCount   = 0;
 
-    setupGlyphTexture();
+    setupGlyphTexture(ctx);
 }
 
-void shutdown()
+void shutdown(RenderContext* _ctx)
 {
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
     //
     // If this macro is defined, the user-provided ddStr type
     // needs some extra cleanup before shutdown, so we run for
-    // all entries in the g_debugStrings[] array.
+    // all entries in the ctx.debugStrings[] array.
     //
     // We could call std::string::clear() here, but clear()
     // doesn't deallocate memory in std string, so we might
@@ -2212,85 +2257,89 @@ void shutdown()
     // when using the default (AKA std::string) ddStr.
     //
     #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
+    for (int i = 0; i < DD_ARRAY_LEN(ctx.debugStrings); ++i)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
+        DEBUG_DRAW_STR_DEALLOC_FUNC(ctx.debugStrings[i].text);
     }
     #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
 
-    if (g_renderInterface != DD_NULL && g_glyphTex != DD_NULL)
+    if (ctx.renderInterface != DD_NULL && ctx.glyphTex != DD_NULL)
     {
-        g_renderInterface->destroyGlyphTexture(g_glyphTex);
-        g_glyphTex = DD_NULL;
+        ctx.renderInterface->destroyGlyphTexture(ctx.glyphTex);
+        ctx.glyphTex = DD_NULL;
     }
 
-    g_renderInterface = DD_NULL;
+    ctx.renderInterface = DD_NULL;
 }
 
-bool hasPendingDraws()
+bool hasPendingDraws(RenderContext* _ctx)
 {
-    return (g_debugStringsCount + g_debugPointsCount + g_debugLinesCount) > 0;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    return (ctx.debugStringsCount + ctx.debugPointsCount + ctx.debugLinesCount) > 0;
 }
 
-void flush(const ddI64 currTimeMillis, const int flags)
+void flush(const ddI64 currTimeMillis, const int flags, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
-    if (!hasPendingDraws())
+    if (!hasPendingDraws(_ctx))
     {
         return;
     }
 
     // Save the last know time value for next dd::line/dd::point calls.
-    g_currentTimeMillis = currTimeMillis;
+    ctx.currentTimeMillis = currTimeMillis;
 
     // Let the user set common render states...
-    g_renderInterface->beginDraw();
+    ctx.renderInterface->beginDraw();
 
     // Issue the render calls:
-    if (flags & FlushLines)  { drawDebugLines();   }
-    if (flags & FlushPoints) { drawDebugPoints();  }
-    if (flags & FlushText)   { drawDebugStrings(); }
+    if (flags & FlushLines)  { drawDebugLines(ctx);   }
+    if (flags & FlushPoints) { drawDebugPoints(ctx);  }
+    if (flags & FlushText)   { drawDebugStrings(ctx); }
 
     // And cleanup if needed...
-    g_renderInterface->endDraw();
+    ctx.renderInterface->endDraw();
 
     // Remove all expired objects, regardless of draw flags:
-    clearDebugQueue(g_debugStrings, g_debugStringsCount);
-    clearDebugQueue(g_debugPoints,  g_debugPointsCount);
-    clearDebugQueue(g_debugLines,   g_debugLinesCount);
+    clearDebugQueue(ctx.debugStrings, ctx.debugStringsCount, ctx);
+    clearDebugQueue(ctx.debugPoints,  ctx.debugPointsCount, ctx);
+    clearDebugQueue(ctx.debugLines,   ctx.debugLinesCount, ctx);
 }
 
-void clear()
+void clear(RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     // Let the user cleanup the debug strings:
     #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
+    for (int i = 0; i < DD_ARRAY_LEN(ctx.debugStrings); ++i)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
+        DEBUG_DRAW_STR_DEALLOC_FUNC(ctx.debugStrings[i].text);
     }
     #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
 
-    g_vertexBufferUsed  = 0;
-    g_debugStringsCount = 0;
-    g_debugPointsCount  = 0;
-    g_debugLinesCount   = 0;
+    ctx.vertexBufferUsed  = 0;
+    ctx.debugStringsCount = 0;
+    ctx.debugPointsCount  = 0;
+    ctx.debugLinesCount   = 0;
 }
 
-void point(ddVec3Param pos, ddVec3Param color, const float size, const int durationMillis, const bool depthEnabled)
+void point(ddVec3Param pos, ddVec3Param color, const float size, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
-    if (g_debugPointsCount == DEBUG_DRAW_MAX_POINTS)
+    if (ctx.debugPointsCount == DEBUG_DRAW_MAX_POINTS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_POINTS limit reached! Dropping further debug point draws.");
         return;
     }
 
-    DebugPoint & point     = g_debugPoints[g_debugPointsCount++];
-    point.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugPoint & point     = ctx.debugPoints[ctx.debugPointsCount++];
+    point.expiryDateMillis = ctx.currentTimeMillis + durationMillis;
     point.depthEnabled     = depthEnabled;
     point.size             = size;
 
@@ -2298,18 +2347,19 @@ void point(ddVec3Param pos, ddVec3Param color, const float size, const int durat
     vecCopy(point.color, color);
 }
 
-void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
-    if (g_debugLinesCount == DEBUG_DRAW_MAX_LINES)
+    if (ctx.debugLinesCount == DEBUG_DRAW_MAX_LINES)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_LINES limit reached! Dropping further debug line draws.");
         return;
     }
 
-    DebugLine & line      = g_debugLines[g_debugLinesCount++];
-    line.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugLine & line      = ctx.debugLines[ctx.debugLinesCount++];
+    line.expiryDateMillis = ctx.currentTimeMillis + durationMillis;
     line.depthEnabled     = depthEnabled;
 
     vecCopy(line.posFrom, from);
@@ -2317,22 +2367,23 @@ void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int duratio
     vecCopy(line.color, color);
 }
 
-void screenText(ddStrParam str, ddVec3Param pos, ddVec3Param color, const float scaling, const int durationMillis)
+void screenText(ddStrParam str, ddVec3Param pos, ddVec3Param color, const float scaling, const int durationMillis, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
-    if (g_glyphTex == DD_NULL)
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
+    if (ctx.glyphTex == DD_NULL)
     {
         return;
     }
 
-    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (ctx.debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
     }
 
-    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
-    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugString & dstr    = ctx.debugStrings[ctx.debugStringsCount++];
+    dstr.expiryDateMillis = ctx.currentTimeMillis + durationMillis;
     dstr.posX             = pos[X];
     dstr.posY             = pos[Y];
     dstr.scaling          = scaling;
@@ -2343,15 +2394,16 @@ void screenText(ddStrParam str, ddVec3Param pos, ddVec3Param color, const float 
 
 void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4Param vpMatrix,
                    const int sx, const int sy, const int sw, const int sh, const float scaling,
-                   const int durationMillis)
+                   const int durationMillis, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
-    if (g_glyphTex == DD_NULL)
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
+    if (ctx.glyphTex == DD_NULL)
     {
         return;
     }
 
-    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (ctx.debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
@@ -2378,8 +2430,8 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
     // NOTE: This is not renderer agnostic, I think... Should add a #define or something!
     scrY = static_cast<float>(sh) - scrY;
 
-    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
-    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugString & dstr    = ctx.debugStrings[ctx.debugStringsCount++];
+    dstr.expiryDateMillis = ctx.currentTimeMillis + durationMillis;
     dstr.posX             = scrX;
     dstr.posY             = scrY;
     dstr.scaling          = scaling;
@@ -2389,9 +2441,10 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
 }
 
 void axisTriad(ddMat4x4Param transform, const float size, const float length,
-               const int durationMillis, const bool depthEnabled)
+               const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 p0, p1, p2, p3;
     ddVec3 xEnd, yEnd, zEnd;
@@ -2411,15 +2464,16 @@ void axisTriad(ddMat4x4Param transform, const float size, const float length,
     matTransformPointXYZ(p2, yEnd, transform);
     matTransformPointXYZ(p3, zEnd, transform);
 
-    arrow(p0, p1, cR, size, durationMillis, depthEnabled); // X: red axis
-    arrow(p0, p2, cG, size, durationMillis, depthEnabled); // Y: green axis
-    arrow(p0, p3, cB, size, durationMillis, depthEnabled); // Z: blue axis
+    arrow(p0, p1, cR, size, durationMillis, depthEnabled, _ctx); // X: red axis
+    arrow(p0, p2, cG, size, durationMillis, depthEnabled, _ctx); // Y: green axis
+    arrow(p0, p3, cB, size, durationMillis, depthEnabled, _ctx); // Z: blue axis
 }
 
 void arrow(ddVec3Param from, ddVec3Param to, ddVec3Param color, const float size,
-           const int durationMillis, const bool depthEnabled)
+           const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     static const float arrowStep = 30.0f; // In degrees
     static bool sinCosTablesComputed = false;
@@ -2443,7 +2497,7 @@ void arrow(ddVec3Param from, ddVec3Param to, ddVec3Param color, const float size
     }
 
     // Body line:
-    line(from, to, color, durationMillis, depthEnabled);
+    line(from, to, color, durationMillis, depthEnabled, _ctx);
 
     // Aux vectors to compute the arrowhead:
     ddVec3 up, right, forward;
@@ -2477,14 +2531,15 @@ void arrow(ddVec3Param from, ddVec3Param to, ddVec3Param color, const float size
         vecScale(temp, up, scale);
         vecAdd(v2, v2, temp);
 
-        line(v1, to, color, durationMillis, depthEnabled);
-        line(v1, v2, color, durationMillis, depthEnabled);
+        line(v1, to, color, durationMillis, depthEnabled, _ctx);
+        line(v1, v2, color, durationMillis, depthEnabled, _ctx);
     }
 }
 
-void cross(ddVec3Param center, const float length, const int durationMillis, const bool depthEnabled)
+void cross(ddVec3Param center, const float length, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 from, to;
     ddVec3 cR, cG, cB;
@@ -2501,23 +2556,24 @@ void cross(ddVec3Param center, const float length, const int durationMillis, con
     // Red line: X - length/2 to X + length/2
     vecSet(from, cx - hl, cy, cz);
     vecSet(to,   cx + hl, cy, cz);
-    line(from, to, cR, durationMillis, depthEnabled);
+    line(from, to, cR, durationMillis, depthEnabled, _ctx);
 
     // Green line: Y - length/2 to Y + length/2
     vecSet(from, cx, cy - hl, cz);
     vecSet(to,   cx, cy + hl, cz);
-    line(from, to, cG, durationMillis, depthEnabled);
+    line(from, to, cG, durationMillis, depthEnabled, _ctx);
 
     // Blue line: Z - length/2 to Z + length/2
     vecSet(from, cx, cy, cz - hl);
     vecSet(to,   cx, cy, cz + hl);
-    line(from, to, cB, durationMillis, depthEnabled);
+    line(from, to, cB, durationMillis, depthEnabled, _ctx);
 }
 
 void circle(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param color, const float radius,
-            const float numSteps, const int durationMillis, const bool depthEnabled)
+            const float numSteps, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 left, up;
     ddVec3 point, lastPoint;
@@ -2539,15 +2595,16 @@ void circle(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param color, cons
         vecAdd(point, center, vs);
         vecAdd(point, point,  vc);
 
-        line(lastPoint, point, color, durationMillis, depthEnabled);
+        line(lastPoint, point, color, durationMillis, depthEnabled, _ctx);
         vecCopy(lastPoint, point);
     }
 }
 
 void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, ddVec3Param normalVecColor,
-           const float planeScale, const float normalVecScale, const int durationMillis, const bool depthEnabled)
+           const float planeScale, const float normalVecScale, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 v1, v2, v3, v4;
     ddVec3 tangent, bitangent;
@@ -2565,10 +2622,10 @@ void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, 
     #undef DD_PLANE_V
 
     // Draw the wireframe plane quadrilateral:
-    line(v1, v2, planeColor, durationMillis, depthEnabled);
-    line(v2, v3, planeColor, durationMillis, depthEnabled);
-    line(v3, v4, planeColor, durationMillis, depthEnabled);
-    line(v4, v1, planeColor, durationMillis, depthEnabled);
+    line(v1, v2, planeColor, durationMillis, depthEnabled, _ctx);
+    line(v2, v3, planeColor, durationMillis, depthEnabled, _ctx);
+    line(v3, v4, planeColor, durationMillis, depthEnabled, _ctx);
+    line(v4, v1, planeColor, durationMillis, depthEnabled, _ctx);
 
     // Optionally add a line depicting the plane normal:
     if (normalVecScale != 0.0f)
@@ -2577,13 +2634,14 @@ void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, 
         normalVec[X] = (planeNormal[X] * normalVecScale) + center[X];
         normalVec[Y] = (planeNormal[Y] * normalVecScale) + center[Y];
         normalVec[Z] = (planeNormal[Z] * normalVecScale) + center[Z];
-        line(center, normalVec, normalVecColor, durationMillis, depthEnabled);
+        line(center, normalVec, normalVecColor, durationMillis, depthEnabled, _ctx);
     }
 }
 
-void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int durationMillis, const bool depthEnabled)
+void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     static const int stepSize = 15;
     ddVec3 cache[360 / stepSize];
@@ -2613,8 +2671,8 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
             temp[Y] = center[Y] + DD_FCOS(DD_DEG2RAD(j)) * radius * s;
             temp[Z] = lastPoint[Z];
 
-            line(lastPoint, temp, color, durationMillis, depthEnabled);
-            line(lastPoint, cache[n], color, durationMillis, depthEnabled);
+            line(lastPoint, temp, color, durationMillis, depthEnabled, _ctx);
+            line(lastPoint, cache[n], color, durationMillis, depthEnabled, _ctx);
 
             vecCopy(cache[n], lastPoint);
             vecCopy(lastPoint, temp);
@@ -2623,9 +2681,10 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
 }
 
 void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float baseRadius,
-          const float apexRadius, const int durationMillis, const bool depthEnabled)
+          const float apexRadius, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     static const int stepSize = 20;
     ddVec3 axis[3];
@@ -2655,8 +2714,8 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
             vecScale(temp0, temp0, baseRadius);
             vecAdd(p2, top, temp0);
 
-            line(lastP2, p2, color, durationMillis, depthEnabled);
-            line(p2, apex, color, durationMillis, depthEnabled);
+            line(lastP2, p2, color, durationMillis, depthEnabled, _ctx);
+            line(p2, apex, color, durationMillis, depthEnabled, _ctx);
 
             vecCopy(lastP2, p2);
         }
@@ -2678,9 +2737,9 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
             vecAdd(p1, apex, temp1);
             vecAdd(p2, top,  temp2);
 
-            line(lastP1, p1, color, durationMillis, depthEnabled);
-            line(lastP2, p2, color, durationMillis, depthEnabled);
-            line(p1, p2, color, durationMillis, depthEnabled);
+            line(lastP1, p1, color, durationMillis, depthEnabled, _ctx);
+            line(lastP2, p2, color, durationMillis, depthEnabled, _ctx);
+            line(p1, p2, color, durationMillis, depthEnabled, _ctx);
 
             vecCopy(lastP1, p1);
             vecCopy(lastP2, p2);
@@ -2688,22 +2747,23 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
     }
 }
 
-void box(const ddVec3 points[8], ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void box(const ddVec3 points[8], ddVec3Param color, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
     // Build the lines from points using clever indexing tricks:
     // (& 3 is a fancy way of doing % 4, but avoids the expensive modulo operation)
     for (int i = 0; i < 4; ++i)
     {
-        line(points[i], points[(i + 1) & 3], color, durationMillis, depthEnabled);
-        line(points[4 + i], points[4 + ((i + 1) & 3)], color, durationMillis, depthEnabled);
-        line(points[i], points[4 + i], color, durationMillis, depthEnabled);
+        line(points[i], points[(i + 1) & 3], color, durationMillis, depthEnabled, _ctx);
+        line(points[4 + i], points[4 + ((i + 1) & 3)], color, durationMillis, depthEnabled, _ctx);
+        line(points[i], points[4 + i], color, durationMillis, depthEnabled, _ctx);
     }
 }
 
 void box(ddVec3Param center, ddVec3Param color, const float width, const float height,
-         const float depth, const int durationMillis, const bool depthEnabled)
+         const float depth, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     const float cx = center[X];
     const float cy = center[Y];
@@ -2728,12 +2788,13 @@ void box(ddVec3Param center, ddVec3Param color, const float width, const float h
     DD_BOX_V(points[7], +, -, +);
     #undef DD_BOX_V
 
-    box(points, color, durationMillis, depthEnabled);
+    box(points, color, durationMillis, depthEnabled, _ctx);
 }
 
-void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 bb[2];
     ddVec3 points[8];
@@ -2750,12 +2811,13 @@ void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durat
     }
 
     // Build the lines:
-    box(points, color, durationMillis, depthEnabled);
+    box(points, color, durationMillis, depthEnabled, _ctx);
 }
 
-void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     // Start with the standard clip volume, then bring it back to world space.
     static const float planes[8][3] = {
@@ -2791,13 +2853,14 @@ void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationM
     }
 
     // Connect the dots:
-    box(points, color, durationMillis, depthEnabled);
+    box(points, color, durationMillis, depthEnabled, _ctx);
 }
 
 void vertexNormal(ddVec3Param origin, ddVec3Param normal, const float length,
-                  const int durationMillis, const bool depthEnabled)
+                  const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 normalVec;
     ddVec3 normalColor;
@@ -2808,13 +2871,14 @@ void vertexNormal(ddVec3Param origin, ddVec3Param normal, const float length,
     normalVec[Y] = (normal[Y] * length) + origin[Y];
     normalVec[Z] = (normal[Z] * length) + origin[Z];
 
-    line(origin, normalVec, normalColor, durationMillis, depthEnabled);
+    line(origin, normalVec, normalColor, durationMillis, depthEnabled, _ctx);
 }
 
 void tangentBasis(ddVec3Param origin, ddVec3Param normal, ddVec3Param tangent, ddVec3Param bitangent,
-                  const float lengths, const int durationMillis, const bool depthEnabled)
+                  const float lengths, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 cN, cT, cB;
     ddVec3 vN, vT, vB;
@@ -2835,15 +2899,16 @@ void tangentBasis(ddVec3Param origin, ddVec3Param normal, ddVec3Param tangent, d
     vB[Y] = (bitangent[Y] * lengths) + origin[Y];
     vB[Z] = (bitangent[Z] * lengths) + origin[Z];
 
-    line(origin, vN, cN, durationMillis, depthEnabled);
-    line(origin, vT, cT, durationMillis, depthEnabled);
-    line(origin, vB, cB, durationMillis, depthEnabled);
+    line(origin, vN, cN, durationMillis, depthEnabled, _ctx);
+    line(origin, vT, cT, durationMillis, depthEnabled, _ctx);
+    line(origin, vB, cB, durationMillis, depthEnabled, _ctx);
 }
 
 void xzSquareGrid(const float mins, const float maxs, const float y, const float step,
-                  ddVec3Param color, const int durationMillis, const bool depthEnabled)
+                  ddVec3Param color, const int durationMillis, const bool depthEnabled, RenderContext* _ctx)
 {
-    DD_CHECK_INIT;
+	InternalContext& ctx = _ctx ? *(InternalContext*)_ctx : *GlobalContext();
+    DD_CHECK_INIT(ctx);
 
     ddVec3 from, to;
     for (float i = mins; i <= maxs; i += step)
@@ -2851,13 +2916,26 @@ void xzSquareGrid(const float mins, const float maxs, const float y, const float
         // Horizontal line (along the X)
         vecSet(from, mins, y, i);
         vecSet(to,   maxs, y, i);
-        line(from, to, color, durationMillis, depthEnabled);
+        line(from, to, color, durationMillis, depthEnabled, _ctx);
 
         // Vertical line (along the Z)
         vecSet(from, i, y, mins);
         vecSet(to,   i, y, maxs);
-        line(from, to, color, durationMillis, depthEnabled);
+        line(from, to, color, durationMillis, depthEnabled, _ctx);
     }
+}
+
+// ========================================================
+// RenderContext factory:
+// ========================================================
+
+RenderContext* RenderContext::alloc()
+{
+	return (RenderContext*)new(DD_MALLOC(sizeof(InternalContext))) InternalContext;
+}
+void RenderContext::free(RenderContext * ptr)
+{
+	DD_MFREE(ptr);
 }
 
 // ========================================================
