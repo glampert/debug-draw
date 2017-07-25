@@ -146,12 +146,9 @@ Apart from that, all data used by the library is statically allocated as file sc
 
 ### Thread safety
 
-Due to its procedural layout and use of static data, Debug Draw *is not thread safe*,
-so its public API cannot be called from multiple threads. This shouldn't be a problem
-for the vast majority of users, since rendering doesn't lend well to parallelization. OpenGL
-and Direct3D calls are normally issued from a single thread. If you really happen to need
-thread-safety, a simple solution might be just making the `static` buffers used by the
-implementation thread-local.
+By default, Debug Draw uses static data and *is not thread safe*, so its public API cannot be called from multiple threads. 
+
+if this is a problem for you, such as in parallel rendering engines, or if you wish to generate debug geometry from simulation / game threads as well as from a rendering thread, you can choose to create multiple `dd::RenderContext` objects. All of the Debug Draw API's take an optional `dd::RenderContext*` as the last parameter, which represents the storage area used by the API call. Each context may only be used by one thread at a time, but you can create multiple contexts to allow multiple threads to use the API simultaneously. Call `dd::RenderContext::alloc` to allocate a context prior to calling `dd::initialize` and call `dd::RenderContext::free` to deallocate the context after calling `dd::shutdown`.
 
 ## Samples
 
