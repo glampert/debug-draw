@@ -22,10 +22,9 @@ before_install:
         sudo apt-get install -y --no-install-recommends libglfw3-dev libxrandr-dev libxi-dev libxxf86vm-dev;
     fi
 
-    # GLFW install on MacOS:
+    # GLFW install on MacOS: (make sure brew can install GLFW in usr/local)
   - if [ $TRAVIS_OS_NAME == osx ]; then
-        # Make sure brew can install GLFW in usr/local
-        sudo chown -R $(whoami) /usr/local
+        sudo chown -R $(whoami) /usr/local;
         brew update;
         brew install glfw3;
     fi
