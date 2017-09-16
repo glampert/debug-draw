@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <cstdarg>
 
 #include <condition_variable>
 #include <functional>

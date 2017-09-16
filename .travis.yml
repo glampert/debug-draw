@@ -24,6 +24,8 @@ before_install:
 
     # GLFW install on MacOS:
   - if [ $TRAVIS_OS_NAME == osx ]; then
+        # Make sure brew can install GLFW in usr/local
+        sudo chown -R $(whoami) /usr/local
         brew update;
         brew install glfw3;
     fi
