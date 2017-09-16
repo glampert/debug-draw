@@ -21,10 +21,11 @@ endif
 # GLFW Should be installed and visible in the system path!
 ifeq ($(UNAME), Darwin)
   CXXFLAGS += -Weffc++
-  GLFW_LIB  = -L/usr/local/lib -lglfw3
+  GLFW_LIB  = -L/usr/local/lib -lglfw
+  LIBRARIES = -framework Cocoa -framework IOKit -framework CoreVideo
 endif
 ifeq ($(UNAME), Linux)
-  CXXFLAGS += `pkg-config --cflags glfw3`
+  CXXFLAGS += -Wno-strict-aliasing `pkg-config --cflags glfw3`
   GLFW_LIB  = `pkg-config --static --libs glfw3`
 endif
 
@@ -45,10 +46,10 @@ endif
 # Macros / source files:
 #------------------------------------------------
 
-LIBRARIES = $(OPENGL_LIB) $(GLFW_LIB)
-INC_DIRS  = -I. -I.. -Ivectormath -Igl3w/include
-CXXFLAGS += $(INC_DIRS) -std=c++11 -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
-CFLAGS    = $(CXXFLAGS)
+LIBRARIES += $(OPENGL_LIB) $(GLFW_LIB)
+INC_DIRS   = -I. -I.. -Ivectormath -Igl3w/include
+CXXFLAGS  += $(INC_DIRS) -std=c++11 -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
+CFLAGS     = $(CXXFLAGS)
 
 # Null renderer sample:
 SRC_FILES_NULL_SAMP  = sample_null_renderer.cpp
