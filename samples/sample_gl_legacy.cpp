@@ -1,10 +1,9 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File: sample_gl_legacy.cpp
+// File:   sample_gl_legacy.cpp
 // Author: Guilherme R. Lampert
-// Created on: 15/12/15
-// Brief: Debug Draw usage sample with legacy (AKA fixed function) OpenGL.
+// Brief:  Debug Draw usage sample with legacy (AKA fixed function) OpenGL.
 //
 // This software is in the public domain. Where that dedication is not recognized,
 // you are granted a perpetual, irrevocable license to copy, distribute, and modify
@@ -15,11 +14,13 @@
 #include "debug_draw.hpp"     // Debug Draw API. Notice that we need the DEBUG_DRAW_IMPLEMENTATION macro here!
 #include "samples_common.hpp" // Common code shared by the samples (camera, input, etc).
 
+using namespace ddSamplesCommon;
+
 // ========================================================
 // Debug Draw RenderInterface for legacy OpenGL:
 // ========================================================
 
-class DDRenderInterfaceLegacyGL FINAL_CLASS
+class DDRenderInterfaceLegacyGL final
     : public dd::RenderInterface
 {
 public:
@@ -28,9 +29,9 @@ public:
     // dd::RenderInterface overrides:
     //
 
-    void drawPointList(const dd::DrawVertex * points, int count, bool depthEnabled) OVERRIDE_METHOD
+    void drawPointList(const dd::DrawVertex * points, int count, bool depthEnabled) override
     {
-        assert(points != NULLPTR);
+        assert(points != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
 
         if (depthEnabled)
@@ -59,9 +60,9 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    void drawLineList(const dd::DrawVertex * lines, int count, bool depthEnabled) OVERRIDE_METHOD
+    void drawLineList(const dd::DrawVertex * lines, int count, bool depthEnabled) override
     {
-        assert(lines != NULLPTR);
+        assert(lines != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
 
         if (depthEnabled)
@@ -85,15 +86,15 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    void drawGlyphList(const dd::DrawVertex * glyphs, int count, dd::GlyphTextureHandle glyphTex) OVERRIDE_METHOD
+    void drawGlyphList(const dd::DrawVertex * glyphs, int count, dd::GlyphTextureHandle glyphTex) override
     {
-        assert(glyphs != NULLPTR);
+        assert(glyphs != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
 
         // Legacy 2D draw settings:
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
-        glOrtho(0, windowWidth, windowHeight, 0, -99999, 99999);
+        glOrtho(0, WindowWidth, WindowHeight, 0, -99999, 99999);
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
 
@@ -103,7 +104,7 @@ public:
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        if (glyphTex != NULLPTR)
+        if (glyphTex != nullptr)
         {
             glEnable(GL_TEXTURE_2D);
             glBindTexture(GL_TEXTURE_2D, handleToGL(glyphTex));
@@ -143,7 +144,7 @@ public:
         glEnd();
 
         glDisable(GL_BLEND);
-        if (glyphTex != NULLPTR)
+        if (glyphTex != nullptr)
         {
             glDisable(GL_TEXTURE_2D);
         }
@@ -151,10 +152,10 @@ public:
         checkGLError(__FILE__, __LINE__);
     }
 
-    dd::GlyphTextureHandle createGlyphTexture(int width, int height, const void * pixels) OVERRIDE_METHOD
+    dd::GlyphTextureHandle createGlyphTexture(int width, int height, const void * pixels) override
     {
         assert(width > 0 && height > 0);
-        assert(pixels != NULLPTR);
+        assert(pixels != nullptr);
 
         GLuint textureId = 0;
         glGenTextures(1, &textureId);
@@ -167,16 +168,16 @@ public:
         //
         // Simplest way is to just expand the texture to RGBA manually.
         // Takes another memory allocation though, but this is a
-        // demo, so performance is not paramount ;)
+        // sample, so performance is not paramount ;)
         //
 
         struct RGBA
         {
-            unsigned char r, g, b, a;
+            std::uint8_t r, g, b, a;
         };
 
         RGBA * expanded = new RGBA[width * height];
-        const unsigned char * p = reinterpret_cast<const unsigned char *>(pixels);
+        const std::uint8_t * p = static_cast<const std::uint8_t *>(pixels);
 
         // Expand graymap the RGBA:
         for (int i = 0; i < width * height; ++i)
@@ -201,9 +202,9 @@ public:
         return GLToHandle(textureId);
     }
 
-    void destroyGlyphTexture(dd::GlyphTextureHandle glyphTex) OVERRIDE_METHOD
+    void destroyGlyphTexture(dd::GlyphTextureHandle glyphTex) override
     {
-        if (glyphTex == NULLPTR)
+        if (glyphTex == nullptr)
         {
             return;
         }
@@ -214,11 +215,9 @@ public:
     }
 
     // These two can also be implemented to perform GL render
-    // state setup/cleanup, but we don't use them in this demo.
-    /*
-    void beginDraw() OVERRIDE_METHOD { }
-    void endDraw()   OVERRIDE_METHOD { }
-    */
+    // state setup/cleanup, but we don't use them in this sample.
+    //void beginDraw() override { }
+    //void endDraw()   override { }
 
     //
     // Local methods:
@@ -226,19 +225,18 @@ public:
 
     DDRenderInterfaceLegacyGL()
     {
-        std::cout << std::endl;
-        std::cout << "GL_VENDOR   : " << glGetString(GL_VENDOR)   << "\n";
-        std::cout << "GL_RENDERER : " << glGetString(GL_RENDERER) << "\n";
-        std::cout << "GL_VERSION  : " << glGetString(GL_VERSION)  << "\n\n";
-        std::cout << "DDRenderInterfaceLegacyGL initializing ...\n";
+        std::printf("\n");
+        std::printf("GL_VENDOR   : %s\n",   glGetString(GL_VENDOR));
+        std::printf("GL_RENDERER : %s\n",   glGetString(GL_RENDERER));
+        std::printf("GL_VERSION  : %s\n\n", glGetString(GL_VERSION));
+        std::printf("DDRenderInterfaceLegacyGL initializing ...\n");
 
         // Default OpenGL states:
         glEnable(GL_CULL_FACE);
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_BLEND);
 
-        std::cout << "DDRenderInterfaceLegacyGL ready!\n";
-        std::cout << std::endl;
+        std::printf("DDRenderInterfaceLegacyGL ready!\n\n");
     }
 
     static GLuint handleToGL(dd::GlyphTextureHandle handle)
@@ -255,13 +253,10 @@ public:
 
     static void checkGLError(const char * file, const int line)
     {
-        GLenum err = 0;
-        char msg[1024];
-        while ((err = glGetError()) != 0)
+        GLenum err;
+        while ((err = glGetError()) != GL_NO_ERROR)
         {
-            std::snprintf(msg, sizeof(msg), "%s(%d) : GL_ERROR=0x%X - %s",
-                          file, line, err, errorToString(err));
-            std::cerr << msg << std::endl;
+            errorF("%s(%d) : GL_ERROR=0x%X - %s", file, line, err, errorToString(err));
         }
     }
 }; // class DDRenderInterfaceLegacyGL
@@ -276,50 +271,40 @@ static void drawGrid()
     {
         return;
     }
-
-    const ddVec3 green = { 0.0f, 0.6f, 0.0f };
-    dd::xzSquareGrid(-50.0f, 50.0f, -1.0f, 1.7f, green); // Grid from -50 to +50 in both X & Z
+    dd::xzSquareGrid(-50.0f, 50.0f, -1.0f, 1.7f, dd::colors::Green); // Grid from -50 to +50 in both X & Z
 }
 
-static void drawLabel(ddVec3Param pos, const char * name)
+static void drawLabel(ddVec3_In pos, const char * name)
 {
     if (!keys.showLabels)
     {
         return;
     }
 
-    // NOTE: Labels that are not in the view volume should not be added.
-    // In this demo, we skip checking for simplicity, so projected labels
-    // that go out of view might still show up in the corners. A frustum
-    // check before adding them would fix the issue.
-    const ddVec3 textColor = { 0.8f, 0.8f, 1.0f };
-    dd::projectedText(name, pos, textColor, toFloatPtr(camera.vpMatrix),
-                      0, 0, windowWidth, windowHeight, 0.5f);
+    // Only draw labels inside the camera frustum.
+    if (camera.isPointInsideFrustum(pos[0], pos[1], pos[2]))
+    {
+        const ddVec3 textColor = { 0.8f, 0.8f, 1.0f };
+        dd::projectedText(name, pos, textColor, toFloatPtr(camera.vpMatrix),
+                          0, 0, WindowWidth, WindowHeight, 0.5f);
+    }
 }
 
 static void drawMiscObjects()
 {
-    const ddVec3 red     = { 1.0f, 0.0f, 0.0f };
-    const ddVec3 blue    = { 0.0f, 0.0f, 1.0f };
-    const ddVec3 cyan    = { 0.0f, 1.0f, 1.0f };
-    const ddVec3 magenta = { 1.0f, 0.2f, 0.8f };
-    const ddVec3 yellow  = { 1.0f, 1.0f, 0.0f };
-    const ddVec3 orange  = { 1.0f, 0.5f, 0.0f };
-    const ddVec3 white   = { 1.0f, 1.0f, 1.0f };
-
     // Start a row of objects at this position:
     ddVec3 origin = { -15.0f, 0.0f, 0.0f };
 
     // Box with a point at it's center:
     drawLabel(origin, "box");
-    dd::box(origin, blue, 1.5f, 1.5f, 1.5f);
-    dd::point(origin, white, 15.0f);
+    dd::box(origin, dd::colors::Blue, 1.5f, 1.5f, 1.5f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 3.0f;
 
     // Sphere with a point at its center
     drawLabel(origin, "sphere");
-    dd::sphere(origin, red, 1.0f);
-    dd::point(origin, white, 15.0f);
+    dd::sphere(origin, dd::colors::Red, 1.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Two cones, one open and one closed:
@@ -327,13 +312,13 @@ static void drawMiscObjects()
     origin[1] -= 1.0f;
 
     drawLabel(origin, "cone (open)");
-    dd::cone(origin, condeDir, yellow, 1.0f, 2.0f);
-    dd::point(origin, white, 15.0f);
+    dd::cone(origin, condeDir, dd::colors::Yellow, 1.0f, 2.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     drawLabel(origin, "cone (closed)");
-    dd::cone(origin, condeDir, cyan, 0.0f, 1.0f);
-    dd::point(origin, white, 15.0f);
+    dd::cone(origin, condeDir, dd::colors::Cyan, 0.0f, 1.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Axis-aligned bounding box:
@@ -345,8 +330,8 @@ static void drawMiscObjects()
         (bbMins[2] + bbMaxs[2]) * 0.5f
     };
     drawLabel(origin, "AABB");
-    dd::aabb(bbMins, bbMaxs, orange);
-    dd::point(bbCenter, white, 15.0f);
+    dd::aabb(bbMins, bbMaxs, dd::colors::Orange);
+    dd::point(bbCenter, dd::colors::White, 15.0f);
 
     // Move along the Z for another row:
     origin[0] = -15.0f;
@@ -356,22 +341,22 @@ static void drawMiscObjects()
     const ddVec3 arrowFrom = { origin[0], origin[1], origin[2] };
     const ddVec3 arrowTo   = { origin[0], origin[1] + 5.0f, origin[2] };
     drawLabel(arrowFrom, "arrow");
-    dd::arrow(arrowFrom, arrowTo, magenta, 1.0f);
-    dd::point(arrowFrom, white, 15.0f);
-    dd::point(arrowTo, white, 15.0f);
+    dd::arrow(arrowFrom, arrowTo, dd::colors::Magenta, 1.0f);
+    dd::point(arrowFrom, dd::colors::White, 15.0f);
+    dd::point(arrowTo, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Plane with normal vector:
     const ddVec3 planeNormal = { 0.0f, 1.0f, 0.0f };
     drawLabel(origin, "plane");
-    dd::plane(origin, planeNormal, yellow, blue, 1.5f, 1.0f);
-    dd::point(origin, white, 15.0f);
+    dd::plane(origin, planeNormal, dd::colors::Yellow, dd::colors::Blue, 1.5f, 1.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Circle on the Y plane:
     drawLabel(origin, "circle");
-    dd::circle(origin, planeNormal, orange, 1.5f, 15.0f);
-    dd::point(origin, white, 15.0f);
+    dd::circle(origin, planeNormal, dd::colors::Orange, 1.5f, 15.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
     origin[0] += 3.2f;
 
     // Tangent basis vectors:
@@ -381,14 +366,14 @@ static void drawMiscObjects()
     origin[1] += 0.1f;
     drawLabel(origin, "tangent basis");
     dd::tangentBasis(origin, normal, tangent, bitangent, 2.5f);
-    dd::point(origin, white, 15.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
 
     // And a set of intersecting axes:
     origin[0] += 4.0f;
     origin[1] += 1.0f;
     drawLabel(origin, "cross");
     dd::cross(origin, 2.0f);
-    dd::point(origin, white, 15.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
 }
 
 static void drawFrustum()
@@ -404,8 +389,7 @@ static void drawFrustum()
     dd::frustum(toFloatPtr(clip), color);
 
     // A white dot at the eye position:
-    const ddVec3 white = { 1.0f, 1.0f, 1.0f };
-    dd::point(origin, white, 15.0f);
+    dd::point(origin, dd::colors::White, 15.0f);
 
     // A set of arrows at the camera's origin/eye:
     const Matrix4 transform = Matrix4::translation(Vector3(-8.0f, 0.5f, 14.0f)) * Matrix4::rotationZ(degToRad(60.0f));
@@ -451,9 +435,11 @@ static void sampleAppDraw()
 
 static void sampleAppStart()
 {
+    printDDBuildConfig();
+
     if (!glfwInit())
     {
-        std::cerr << "Failed to initialize GLFW!" << std::endl;
+        errorF("Failed to initialize GLFW!");
         return;
     }
 
@@ -463,12 +449,12 @@ static void sampleAppStart()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
-    GLFWwindow * window = glfwCreateWindow(windowWidth, windowHeight,
+    GLFWwindow * window = glfwCreateWindow(WindowWidth, WindowHeight,
                                            "Debug Draw Sample - Legacy OpenGL",
-                                           NULLPTR, NULLPTR);
+                                           nullptr, nullptr);
     if (!window)
     {
-        std::cerr << "Failed to create GLFW window!" << std::endl;
+        errorF("Failed to create GLFW window!");
         return;
     }
 
@@ -493,7 +479,7 @@ static void sampleAppStart()
         const double t1s = glfwGetTime();
 
         deltaTime.seconds      = static_cast<float>(t1s - t0s);
-        deltaTime.milliseconds = static_cast<long long>(deltaTime.seconds * 1000.0);
+        deltaTime.milliseconds = static_cast<std::int64_t>(deltaTime.seconds * 1000.0);
     }
 
     dd::shutdown();
@@ -508,3 +494,4 @@ int main()
     sampleAppStart();
     glfwTerminate();
 }
+

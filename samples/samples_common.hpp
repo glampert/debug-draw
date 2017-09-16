@@ -1,10 +1,9 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File: samples_common.hpp
+// File:   samples_common.hpp
 // Author: Guilherme R. Lampert
-// Created on: 15/12/15
-// Brief: Common code shared by the Debug Draw samples.
+// Brief:  Common code shared by the Debug Draw samples.
 //
 // This software is in the public domain. Where that dedication is not recognized,
 // you are granted a perpetual, irrevocable license to copy, distribute, and modify
@@ -14,42 +13,40 @@
 #ifndef DD_SAMPLES_COMMON_HPP
 #define DD_SAMPLES_COMMON_HPP
 
-// Shared dependencies:
 #include <cassert>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <iostream>
+
+#include <condition_variable>
+#include <functional>
+#include <mutex>
+#include <queue>
+#include <thread>
+
 #include <GLFW/glfw3.h>
 #include <vectormath.h>
 
-// Check for a couple C++11 goodies we'd like to use if available...
-#if DEBUG_DRAW_CXX11_SUPPORTED
-    #define OVERRIDE_METHOD override
-    #define FINAL_CLASS     final
-    #define NULLPTR         nullptr
-#else // !C++11
-    #define OVERRIDE_METHOD
-    #define FINAL_CLASS
-    #define NULLPTR         NULL
-#endif // DEBUG_DRAW_CXX11_SUPPORTED
+namespace ddSamplesCommon
+{
 
 // App window dimensions; Not resizable.
-static const int windowWidth  = 1024;
-static const int windowHeight = 768;
+static const int WindowWidth  = 1024;
+static const int WindowHeight = 768;
 
 // Angle in degrees to angle in radians for sin/cos/etc.
-static inline float degToRad(const float ang)
+static inline float degToRad(const float degrees)
 {
-    return ang * 3.1415926535897931f / 180.0f;
+    return (degrees * 3.1415926535897931f / 180.0f);
 }
 
 // Time in milliseconds since the application started.
-static inline long long getTimeMilliseconds()
+static inline std::int64_t getTimeMilliseconds()
 {
     const double seconds = glfwGetTime();
-    return static_cast<long long>(seconds * 1000.0);
+    return static_cast<std::int64_t>(seconds * 1000.0);
 }
 
 // GL error enum to printable string.
@@ -66,6 +63,43 @@ static inline const char * errorToString(const GLenum errorCode)
     case GL_STACK_OVERFLOW    : return "GL_STACK_OVERFLOW";  // Legacy; not used on GL3+
     default                   : return "Unknown GL error";
     } // switch (errorCode)
+}
+
+// Prints error to standard error stream.
+static inline void errorF(const char * format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    std::vfprintf(stderr, format, args);
+    va_end(args);
+
+    // Default newline and flush (like std::endl)
+    std::fputc('\n', stderr);
+    std::fflush(stderr);
+}
+
+// Prints some of the compile-time build settings to stdout.
+static inline void printDDBuildConfig()
+{
+    std::printf("\n");
+
+    #ifdef DEBUG_DRAW_CXX11_SUPPORTED
+    std::printf("DEBUG_DRAW_CXX11_SUPPORTED    = %u\n", DEBUG_DRAW_CXX11_SUPPORTED);
+    #endif // DEBUG_DRAW_CXX11_SUPPORTED
+
+    #ifdef DEBUG_DRAW_PER_THREAD_CONTEXT
+    std::printf("DEBUG_DRAW_PER_THREAD_CONTEXT = %u\n", /*DEBUG_DRAW_PER_THREAD_CONTEXT*/1);
+    #endif // DEBUG_DRAW_PER_THREAD_CONTEXT
+
+    #ifdef DEBUG_DRAW_EXPLICIT_CONTEXT
+    std::printf("DEBUG_DRAW_EXPLICIT_CONTEXT   = %u\n", /*DEBUG_DRAW_EXPLICIT_CONTEXT*/1);
+    #endif // DEBUG_DRAW_EXPLICIT_CONTEXT
+
+    std::printf("DEBUG_DRAW_USE_STD_MATH       = %u\n", DEBUG_DRAW_USE_STD_MATH);
+    std::printf("DEBUG_DRAW_MAX_STRINGS        = %u\n", DEBUG_DRAW_MAX_STRINGS);
+    std::printf("DEBUG_DRAW_MAX_POINTS         = %u\n", DEBUG_DRAW_MAX_POINTS);
+    std::printf("DEBUG_DRAW_MAX_LINES          = %u\n", DEBUG_DRAW_MAX_LINES);
+    std::printf("DEBUG_DRAW_VERTEX_BUFFER_SIZE = %u\n", DEBUG_DRAW_VERTEX_BUFFER_SIZE);
 }
 
 // ========================================================
@@ -98,7 +132,7 @@ struct Mouse
 struct Time
 {
     float seconds;
-    long long milliseconds;
+    std::int64_t milliseconds;
 } deltaTime;
 
 struct Camera
@@ -122,6 +156,10 @@ struct Camera
     Matrix4 projMatrix;
     Matrix4 vpMatrix;
 
+    // Frustum planes for clipping:
+    enum { A, B, C, D };
+    Vector4 planes[6];
+
     enum MoveDir
     {
         Forward, // Move forward relative to the camera's space
@@ -140,8 +178,13 @@ struct Camera
         vpMatrix   = Matrix4::identity();
 
         const float fovY   = degToRad(60.0f);
-        const float aspect = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+        const float aspect = static_cast<float>(WindowWidth) / static_cast<float>(WindowHeight);
         projMatrix = Matrix4::perspective(fovY, aspect, 0.1f, 1000.0f);
+
+        for (int i = 0; i < 6; ++i)
+        {
+            planes[i] = Vector4(0.0f);
+        }
     }
 
     void pitch(const float angle)
@@ -239,11 +282,56 @@ struct Camera
     {
         viewMatrix = Matrix4::lookAt(Point3(eye), getTarget(), up);
         vpMatrix   = projMatrix * viewMatrix; // Vectormath lib uses column-major OGL style, so multiply P*V*M
+
+        // Compute and normalize the 6 frustum planes:
+        const float * const m = toFloatPtr(vpMatrix);
+        planes[0][A] = m[3]  - m[0];
+        planes[0][B] = m[7]  - m[4];
+        planes[0][C] = m[11] - m[8];
+        planes[0][D] = m[15] - m[12];
+        planes[0] = normalize(planes[0]);
+        planes[1][A] = m[3]  + m[0];
+        planes[1][B] = m[7]  + m[4];
+        planes[1][C] = m[11] + m[8];
+        planes[1][D] = m[15] + m[12];
+        planes[1] = normalize(planes[1]);
+        planes[2][A] = m[3]  + m[1];
+        planes[2][B] = m[7]  + m[5];
+        planes[2][C] = m[11] + m[9];
+        planes[2][D] = m[15] + m[13];
+        planes[2] = normalize(planes[2]);
+        planes[3][A] = m[3]  - m[1];
+        planes[3][B] = m[7]  - m[5];
+        planes[3][C] = m[11] - m[9];
+        planes[3][D] = m[15] - m[13];
+        planes[3] = normalize(planes[3]);
+        planes[4][A] = m[3]  - m[2];
+        planes[4][B] = m[7]  - m[6];
+        planes[4][C] = m[11] - m[10];
+        planes[4][D] = m[15] - m[14];
+        planes[4] = normalize(planes[4]);
+        planes[5][A] = m[3]  + m[2];
+        planes[5][B] = m[7]  + m[6];
+        planes[5][C] = m[11] + m[10];
+        planes[5][D] = m[15] + m[14];
+        planes[5] = normalize(planes[5]);
     }
 
     Point3 getTarget() const
     {
         return Point3(eye[0] + forward[0], eye[1] + forward[1], eye[2] + forward[2]);
+    }
+
+    bool isPointInsideFrustum(const float x, const float y, const float z) const
+    {
+        for (int i = 0; i < 6; ++i)
+        {
+            if ((planes[i][A] * x + planes[i][B] * y + planes[i][C] * z + planes[i][D]) <= 0.0f)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     static Vector3 rotateAroundAxis(const Vector3 & vec, const Vector3 & axis, const float angle)
@@ -284,9 +372,9 @@ static void mousePositionCallback(GLFWwindow * window, const double xPos, const 
     int my = static_cast<int>(yPos);
 
     // Clamp to window bounds:
-    if      (mx > windowWidth)  { mx = windowWidth;  }
+    if      (mx > WindowWidth)  { mx = WindowWidth;  }
     else if (mx < 0)            { mx = 0;            }
-    if      (my > windowHeight) { my = windowHeight; }
+    if      (my > WindowHeight) { my = WindowHeight; }
     else if (my < 0)            { my = 0;            }
 
     mouse.deltaX = mx - mouse.lastPosX;
@@ -350,4 +438,105 @@ static void initInput(GLFWwindow * window)
     glfwSetKeyCallback(window,         &keyCallback);
 }
 
+// ========================================================
+// MainThreadChecker - test if the calling thread is main()
+// ========================================================
+
+struct MainThreadChecker
+{
+    const std::thread::id mainThreadId;
+
+    MainThreadChecker()
+        : mainThreadId(std::this_thread::get_id())
+    { }
+
+    bool operator()() const
+    {
+        return std::this_thread::get_id() == mainThreadId;
+    }
+} isMainThread;
+
+// ========================================================
+// class JobQueue
+// ========================================================
+
+class JobQueue final
+{
+public:
+    typedef std::function<void()> Job;
+
+    // Wait for the worker thread to exit.
+    ~JobQueue()
+    {
+        if (worker.joinable())
+        {
+            waitAll();
+            mutex.lock();
+            terminating = true;
+            condition.notify_one();
+            mutex.unlock();
+            worker.join();
+        }
+    }
+
+    // Launch the worker thread.
+    void launch()
+    {
+        assert(!worker.joinable()); // Not already launched!
+        worker = std::thread(&JobQueue::queueLoop, this);
+    }
+
+    // Add a new job to the thread's queue.
+    void pushJob(Job job)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        queue.push(std::move(job));
+        condition.notify_one();
+    }
+
+    // Wait until all work items have been completed.
+    void waitAll()
+    {
+        std::unique_lock<std::mutex> lock(mutex);
+        condition.wait(lock, [this]() { return queue.empty(); });
+    }
+
+private:
+    void queueLoop()
+    {
+        for (;;)
+        {
+            Job job;
+            {
+                std::unique_lock<std::mutex> lock(mutex);
+                condition.wait(lock, [this] { return !queue.empty() || terminating; });
+                if (terminating)
+                {
+                    break;
+                }
+                job = queue.front();
+            }
+
+            job();
+
+            {
+                std::lock_guard<std::mutex> lock(mutex);
+                queue.pop();
+                condition.notify_one();
+            }
+        }
+    }
+
+    bool terminating = false;
+
+    std::thread worker;
+    std::queue<Job> queue;
+
+    std::mutex mutex;
+    std::condition_variable condition;
+};
+
+} // namespace ddSamplesCommon
+
 #endif // DD_SAMPLES_COMMON_HPP
+

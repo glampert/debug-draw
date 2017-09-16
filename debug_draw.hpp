@@ -1,10 +1,9 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File: debug_draw.hpp
+// File:   debug_draw.hpp
 // Author: Guilherme R. Lampert
-// Created on: 10/12/15
-// Brief: Debug Draw - an immediate-mode, renderer agnostic, lightweight debug drawing API.
+// Brief:  Debug Draw - an immediate-mode, renderer agnostic, lightweight debug drawing API.
 // ================================================================================================
 
 #ifndef DEBUG_DRAW_HPP
@@ -44,11 +43,9 @@
 //
 //   #include "debug_draw.hpp"
 //
-// -------------------
-//  COMPILER SWITCHES
-// -------------------
-// Several compiler switches are provided for library customization. Check the
-// following section for a detailed description of each. The noteworthy ones are:
+// ----------------------
+//  COMPILATION SWITCHES
+// ----------------------
 //
 // DEBUG_DRAW_CXX11_SUPPORTED
 //  Enables the use of some C++11 features. If your compiler supports C++11
@@ -56,10 +53,10 @@
 //  of this file. If it is not defined, we try to guess it from the value of the
 //  '__cplusplus' built-in macro constant.
 //
-// DEBUG_DRAW_MAX_XYZ
-//  Sizes of internal intermediate buffers, which are statically allocated
-//  in the implementation. If you need to draw more primitives than the sizes
-//  of these buffers, you need to redefine them and recompile.
+// DEBUG_DRAW_MAX_*
+//  Sizes of internal intermediate buffers, which are allocated on initialization
+//  by the implementation. If you need to draw more primitives than the sizes of
+//  these buffers, you need to redefine the macros and recompile.
 //
 // DEBUG_DRAW_VERTEX_BUFFER_SIZE
 //  Size in dd::DrawVertex elements of the intermediate vertex buffer used
@@ -68,58 +65,77 @@
 //  large sets of debug primitives.
 //
 // DEBUG_DRAW_OVERFLOWED(message)
-//  An error handler called if the DEBUG_DRAW_MAX_XYZ sizes overflow.
+//  An error handler called if any of the DEBUG_DRAW_MAX_* sizes overflow.
 //  By default it just prints a message to stderr.
 //
 // DEBUG_DRAW_USE_STD_MATH
-//  If defined to nonzero, use cmath/math.h. If you redefine it to zero before
-//  the DD implementation, it will force the use of local replacements
-//  for the library. This might be useful if you want to avoid the dependency.
-//  It is defined to zero by default (i.e. we use cmath by default).
+//  If defined to nonzero, uses cmath/math.h. If you redefine it to zero before
+//  the library implementation, it will force the use of local replacements
+//  for the Standard Library. This might be useful if you want to avoid the
+//  dependency. It is defined to zero by default (i.e. we use cmath by default).
 //
-// DEBUG_DRAW_XYZ_TYPE_DEFINED
-//  The compound types used by the DD library can also be customized.
+// DEBUG_DRAW_*_TYPE_DEFINED
+//  The compound types used by Debug Draw can also be customized.
 //  By default, ddVec3 and ddMat4x4 are plain C-arrays, but you can
 //  redefine them to use your own classes or structures (see below).
 //  ddStr is by default a std::string, but you can redefine it to
-//  a custom string type if necessary. The only requirement is that
-//  it provides a 'c_str()' method returning a null terminated const char* string.
+//  a custom string type if necessary. The only requirements are that
+//  it provides a 'c_str()' method returning a null terminated
+//  const char* string and an assignment operator (=).
 //
 // DEBUG_DRAW_STR_DEALLOC_FUNC(str)
 //  If you define a custom string type for ddStr and it requires some
-//  extra cleanup, you might define this function macro to perform the cleanup.
-//  It is called by dd::clear() and dd::shutdown() on every instance of the
-//  internal DebugString buffer.
+//  extra cleanup besides the class destructor, you might define this
+//  function macro to perform said cleanup. It is called by dd::clear()
+//  and dd::shutdown() on every instance of the internal DebugString buffer.
+//
+// DEBUG_DRAW_NO_DEFAULT_COLORS
+//  If defined, doesn't add the set of predefined color constants inside
+//  dd::colors:: namespace. Each color is a ddVec3, so you can define this
+//  to prevent adding more global data to the binary if you don't need them.
+//
+// DEBUG_DRAW_PER_THREAD_CONTEXT
+//  If defined, a per-thread global context will be created for Debug Draw.
+//  This allows having an instance of the library for each thread in
+//  your application. You must then call initialize/shutdown/flush/etc
+//  for each thread that wishes to use the library. If this is not
+//  defined it defaults to a single threaded global context.
+//
+// DEBUG_DRAW_EXPLICIT_CONTEXT
+//  If defined, each Debug Draw function will expect and additional argument
+//  (the first one) which is the library context instance. This is an alternative
+//  to DEBUG_DRAW_PER_THREAD_CONTEXT to allow having multiple instances of the
+//  library in the same application. This flag is mutually exclusive with
+//  DEBUG_DRAW_PER_THREAD_CONTEXT.
 //
 // -------------------
 //  MEMORY ALLOCATION
 // -------------------
-// Debug Draw will only perform one memory allocation during startup to decompress
-// the built-in glyph bitmap used for debug text rendering. All the vertex buffers
-// and intermediate draw/batch buffers used internally are declared as static
-// C-style arrays with fixed size.
+// Debug Draw will only perform a couple of memory allocations during startup to decompress
+// the built-in glyph bitmap used for debug text rendering and to allocate the vertex buffers
+// and intermediate draw/batch buffers and context data used internally.
 //
-// Memory allocation & deallocation for the glyph bitmap decompression will be done via:
+// Memory allocation and deallocation for Debug Draw will be done via:
 //
 //   DD_MALLOC(size)
 //   DD_MFREE(ptr)
 //
 // These two macros can be redefined if you'd like to supply you own memory allocator.
 // By default, they are defined to use std::malloc and std::free, respectively.
-// Note: If you redefine one, you must also provide the other!
+// Note: If you redefine one, you must also provide the other.
 //
 // --------------------------------
 //  INTERFACING WITH YOUR RENDERER
 // --------------------------------
 // Debug Draw doesn't touch on any renderer-specific aspects or APIs, instead you provide
-// DD with all of it's rendering needs via the dd::RenderInterface abstract class.
+// the library with all of it's rendering needs via the dd::RenderInterface abstract class.
 //
-// See the definition of dd::RenderInterface for the details. Not all methods are
+// See the declaration of dd::RenderInterface for details. Not all methods are
 // required. In fact, you could also implement a full no-op RenderInterface that
-// disables debug drawing by simply inheriting from RenderInterface and not overriding
+// disables debug drawing by simply inheriting from dd::RenderInterface and not overriding
 // any of the methods (or even easier, call dd::initialize(nullptr) to make everything a no-op).
 //
-// For examples on how to implement your own RenderInterface, see the accompanying samples.
+// For examples on how to implement your own dd::RenderInterface, see the accompanying samples.
 // You can also find them in the source code repository for this project:
 // https://github.com/glampert/debug-draw
 //
@@ -143,10 +159,9 @@
 // debug drawing API doesn't have to be very robust, since it won't make
 // into the final release executable in most cases.
 //
-// END OF DOCUMENTATION
 
 // ========================================================
-// Compiler switches:
+// Configurable compilation switches:
 // ========================================================
 
 //
@@ -184,11 +199,11 @@
 //
 // Size in vertexes of a local buffer we use to sort elements
 // drawn with and without depth testing before submitting them to
-// the RenderInterface. A larger buffer will require less flushes
-// (e.g. RenderInterface calls) when drawing large amounts of
+// the dd::RenderInterface. A larger buffer will require less flushes
+// (e.g. dd::RenderInterface calls) when drawing large amounts of
 // primitives. Less will obviously save more memory. Each DrawVertex
-// is about 32 bytes in size, we declare a local static array with
-// this many entries.
+// is about 32 bytes in size, we keep a context-specific array
+// with this many entries.
 //
 #ifndef DEBUG_DRAW_VERTEX_BUFFER_SIZE
     #define DEBUG_DRAW_VERTEX_BUFFER_SIZE 4096
@@ -201,8 +216,8 @@
 // is needed for the debug data arrays. Default output is stderr.
 //
 #ifndef DEBUG_DRAW_OVERFLOWED
-    #include <iostream>
-    #define DEBUG_DRAW_OVERFLOWED(message) std::cerr << message << "\n"
+    #include <cstdio>
+    #define DEBUG_DRAW_OVERFLOWED(message) std::fprintf(stderr, "%s\n", message)
 #endif // DEBUG_DRAW_OVERFLOWED
 
 //
@@ -219,10 +234,13 @@
 // Overridable Debug Draw types:
 // ========================================================
 
+#include <cstddef>
+#include <cstdint>
+
 //
 // Following typedefs are not members of the dd:: namespace to allow easy redefinition by the user.
 // If you provide a custom implementation for them before including this file, be sure to
-// also define the proper DEBUG_DRAW_XYZ_TYPE_DEFINED switch to disable the default typedefs.
+// also define the proper DEBUG_DRAW_*_TYPE_DEFINED switch to disable the default typedefs.
 //
 // The only requirement placed on the vector/matrix types is that they provide
 // an array subscript operator [] and have the expected number of elements. Apart
@@ -237,13 +255,14 @@
     //  A custom ddVec3 type must provide the array subscript operator.
     typedef float ddVec3[3];
 
-    // ddVec3Param:
+    // ddVec3_In/ddVec3_Out:
     //  Since our default ddVec3 is a plain C-array, it decays to a pointer
     //  when passed as an input parameter to a function, so we can use it directly.
     //  If you change it to some structured type, it might be more efficient
     //  passing by const reference instead, however, some platforms have optimized
     //  hardware registers for vec3s/vec4s, so passing by value might also be efficient.
-    typedef const ddVec3 ddVec3Param;
+    typedef const ddVec3 ddVec3_In;
+    typedef       ddVec3 ddVec3_Out;
 
     #define DEBUG_DRAW_VEC3_TYPE_DEFINED 1
 #endif // DEBUG_DRAW_VEC3_TYPE_DEFINED
@@ -264,12 +283,13 @@
     //  We use the array subscript operator internally, so it must also be provided.
     typedef float ddMat4x4[4 * 4];
 
-    // ddMat4x4Param:
+    // ddMat4x4_In/ddMat4x4_Out:
     //  Since our default ddMat4x4 is a plain C-array, it decays to a pointer
     //  when passed as an input parameter to a function, so we can use it directly.
     //  If you change it to some structured type, it might be more efficient
     //  passing by const reference instead.
-    typedef const ddMat4x4 ddMat4x4Param;
+    typedef const ddMat4x4 ddMat4x4_In;
+    typedef       ddMat4x4 ddMat4x4_Out;
 
     #define DEBUG_DRAW_MAT4X4_TYPE_DEFINED 1
 #endif // DEBUG_DRAW_MAT4X4_TYPE_DEFINED
@@ -282,65 +302,191 @@
     //  null-terminated const char* string pointer. That's it.
     //  An array subscript operator [] is not required for ddStr.
     #include <string>
-    typedef std::string ddStr;
-
-    // ddStrParam:
-    //  If we have C++11, the correct usage for std::string is to
-    //  pass by value and move when storing it. Pre-11 usage is
-    //  pass by const reference and copy-assign.
-    #if DEBUG_DRAW_CXX11_SUPPORTED
-        typedef std::string ddStrParam;
-    #else // !C++11
-        typedef const std::string & ddStrParam;
-    #endif // DEBUG_DRAW_CXX11_SUPPORTED
+    typedef std::string   ddStr;
+    typedef const ddStr & ddStr_In;
+    typedef       ddStr & ddStr_Out;
 
     #define DEBUG_DRAW_STRING_TYPE_DEFINED 1
 #endif // DEBUG_DRAW_STRING_TYPE_DEFINED
-
-#ifndef DEBUG_DRAW_INT_TYPES_DEFINED
-    // ddI64:
-    //  64-bits integer type used to keep track of times in milliseconds.
-    //  If your platform is missing cstdint/stdint.h you can redefine it
-    //  to some platform-specific equivalent. If not compiling C++11, we
-    //  assume cstdint is missing and try a MSVC extension or the 'long long' type.
-    //
-    // ddU32:
-    //  32-bits unsigned integer. Used internally for int=>float casts
-    //  (mainly only if using the local fast-math approximations).
-    //  Make sure it is not smaller than sizeof(float).
-    #if DEBUG_DRAW_CXX11_SUPPORTED
-        #include <cstdint>
-        typedef std::int64_t  ddI64;
-        typedef std::uint32_t ddU32;
-    #else // !C++11
-        #ifdef _MSC_VER
-            typedef          __int64 ddI64;
-            typedef unsigned __int32 ddU32;
-        #else // !_MSC_VER
-            typedef    long long ddI64;
-            typedef unsigned int ddU32;
-        #endif // _MSC_VER
-    #endif // DEBUG_DRAW_CXX11_SUPPORTED
-
-    #define DEBUG_DRAW_INT_TYPES_DEFINED 1
-#endif // DEBUG_DRAW_INT_TYPES_DEFINED
 
 namespace dd
 {
 
 // ========================================================
+// Optional built-in colors in RGB float format:
+// ========================================================
+
+#ifndef DEBUG_DRAW_NO_DEFAULT_COLORS
+namespace colors
+{
+extern const ddVec3 AliceBlue;
+extern const ddVec3 AntiqueWhite;
+extern const ddVec3 Aquamarine;
+extern const ddVec3 Azure;
+extern const ddVec3 Beige;
+extern const ddVec3 Bisque;
+extern const ddVec3 Black;
+extern const ddVec3 BlanchedAlmond;
+extern const ddVec3 Blue;
+extern const ddVec3 BlueViolet;
+extern const ddVec3 Brown;
+extern const ddVec3 BurlyWood;
+extern const ddVec3 CadetBlue;
+extern const ddVec3 Chartreuse;
+extern const ddVec3 Chocolate;
+extern const ddVec3 Coral;
+extern const ddVec3 CornflowerBlue;
+extern const ddVec3 Cornsilk;
+extern const ddVec3 Crimson;
+extern const ddVec3 Cyan;
+extern const ddVec3 DarkBlue;
+extern const ddVec3 DarkCyan;
+extern const ddVec3 DarkGoldenRod;
+extern const ddVec3 DarkGray;
+extern const ddVec3 DarkGreen;
+extern const ddVec3 DarkKhaki;
+extern const ddVec3 DarkMagenta;
+extern const ddVec3 DarkOliveGreen;
+extern const ddVec3 DarkOrange;
+extern const ddVec3 DarkOrchid;
+extern const ddVec3 DarkRed;
+extern const ddVec3 DarkSalmon;
+extern const ddVec3 DarkSeaGreen;
+extern const ddVec3 DarkSlateBlue;
+extern const ddVec3 DarkSlateGray;
+extern const ddVec3 DarkTurquoise;
+extern const ddVec3 DarkViolet;
+extern const ddVec3 DeepPink;
+extern const ddVec3 DeepSkyBlue;
+extern const ddVec3 DimGray;
+extern const ddVec3 DodgerBlue;
+extern const ddVec3 FireBrick;
+extern const ddVec3 FloralWhite;
+extern const ddVec3 ForestGreen;
+extern const ddVec3 Gainsboro;
+extern const ddVec3 GhostWhite;
+extern const ddVec3 Gold;
+extern const ddVec3 GoldenRod;
+extern const ddVec3 Gray;
+extern const ddVec3 Green;
+extern const ddVec3 GreenYellow;
+extern const ddVec3 HoneyDew;
+extern const ddVec3 HotPink;
+extern const ddVec3 IndianRed;
+extern const ddVec3 Indigo;
+extern const ddVec3 Ivory;
+extern const ddVec3 Khaki;
+extern const ddVec3 Lavender;
+extern const ddVec3 LavenderBlush;
+extern const ddVec3 LawnGreen;
+extern const ddVec3 LemonChiffon;
+extern const ddVec3 LightBlue;
+extern const ddVec3 LightCoral;
+extern const ddVec3 LightCyan;
+extern const ddVec3 LightGoldenYellow;
+extern const ddVec3 LightGray;
+extern const ddVec3 LightGreen;
+extern const ddVec3 LightPink;
+extern const ddVec3 LightSalmon;
+extern const ddVec3 LightSeaGreen;
+extern const ddVec3 LightSkyBlue;
+extern const ddVec3 LightSlateGray;
+extern const ddVec3 LightSteelBlue;
+extern const ddVec3 LightYellow;
+extern const ddVec3 Lime;
+extern const ddVec3 LimeGreen;
+extern const ddVec3 Linen;
+extern const ddVec3 Magenta;
+extern const ddVec3 Maroon;
+extern const ddVec3 MediumAquaMarine;
+extern const ddVec3 MediumBlue;
+extern const ddVec3 MediumOrchid;
+extern const ddVec3 MediumPurple;
+extern const ddVec3 MediumSeaGreen;
+extern const ddVec3 MediumSlateBlue;
+extern const ddVec3 MediumSpringGreen;
+extern const ddVec3 MediumTurquoise;
+extern const ddVec3 MediumVioletRed;
+extern const ddVec3 MidnightBlue;
+extern const ddVec3 MintCream;
+extern const ddVec3 MistyRose;
+extern const ddVec3 Moccasin;
+extern const ddVec3 NavajoWhite;
+extern const ddVec3 Navy;
+extern const ddVec3 OldLace;
+extern const ddVec3 Olive;
+extern const ddVec3 OliveDrab;
+extern const ddVec3 Orange;
+extern const ddVec3 OrangeRed;
+extern const ddVec3 Orchid;
+extern const ddVec3 PaleGoldenRod;
+extern const ddVec3 PaleGreen;
+extern const ddVec3 PaleTurquoise;
+extern const ddVec3 PaleVioletRed;
+extern const ddVec3 PapayaWhip;
+extern const ddVec3 PeachPuff;
+extern const ddVec3 Peru;
+extern const ddVec3 Pink;
+extern const ddVec3 Plum;
+extern const ddVec3 PowderBlue;
+extern const ddVec3 Purple;
+extern const ddVec3 RebeccaPurple;
+extern const ddVec3 Red;
+extern const ddVec3 RosyBrown;
+extern const ddVec3 RoyalBlue;
+extern const ddVec3 SaddleBrown;
+extern const ddVec3 Salmon;
+extern const ddVec3 SandyBrown;
+extern const ddVec3 SeaGreen;
+extern const ddVec3 SeaShell;
+extern const ddVec3 Sienna;
+extern const ddVec3 Silver;
+extern const ddVec3 SkyBlue;
+extern const ddVec3 SlateBlue;
+extern const ddVec3 SlateGray;
+extern const ddVec3 Snow;
+extern const ddVec3 SpringGreen;
+extern const ddVec3 SteelBlue;
+extern const ddVec3 Tan;
+extern const ddVec3 Teal;
+extern const ddVec3 Thistle;
+extern const ddVec3 Tomato;
+extern const ddVec3 Turquoise;
+extern const ddVec3 Violet;
+extern const ddVec3 Wheat;
+extern const ddVec3 White;
+extern const ddVec3 WhiteSmoke;
+extern const ddVec3 Yellow;
+extern const ddVec3 YellowGreen;
+} // namespace colors
+#endif // DEBUG_DRAW_NO_DEFAULT_COLORS
+
+// ========================================================
+// Optional explicit context mode:
+// ========================================================
+
+#ifdef DEBUG_DRAW_EXPLICIT_CONTEXT
+    struct OpaqueContextType { };
+    typedef OpaqueContextType * ContextHandle;
+    #define DD_EXPLICIT_CONTEXT_ONLY(...) __VA_ARGS__
+#else // !DEBUG_DRAW_EXPLICIT_CONTEXT
+    #define DD_EXPLICIT_CONTEXT_ONLY(...) /* nothing */
+#endif // DEBUG_DRAW_EXPLICIT_CONTEXT
+
+// ========================================================
 // Debug Draw functions:
-// Durations are always in milliseconds.
-// Colors are RGB floats in the [0,1] range.
-// Positions are in world-space, unless stated otherwise.
+// - Durations are always in milliseconds.
+// - Colors are RGB floats in the [0,1] range.
+// - Positions are in world-space, unless stated otherwise.
 // ========================================================
 
 // Add a point in 3D space to the debug draw queue.
 // Point is expressed in world-space coordinates.
 // Note that not all renderer support configurable point
 // size, so take the 'size' parameter as a hint only
-void point(ddVec3Param pos,
-           ddVec3Param color,
+void point(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+           ddVec3_In pos,
+           ddVec3_In color,
            float size = 1.0f,
            int durationMillis = 0,
            bool depthEnabled = true);
@@ -348,9 +494,10 @@ void point(ddVec3Param pos,
 // Add a 3D line to the debug draw queue. Note that
 // lines are expressed in world coordinates, and so are
 // all wireframe primitives which are built from lines.
-void line(ddVec3Param from,
-          ddVec3Param to,
-          ddVec3Param color,
+void line(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+          ddVec3_In from,
+          ddVec3_In to,
+          ddVec3_In color,
           int durationMillis = 0,
           bool depthEnabled = true);
 
@@ -358,9 +505,10 @@ void line(ddVec3Param from,
 // Position is in screen-space pixels, origin at the top-left corner of the screen.
 // The third element (Z) of the position vector is ignored.
 // Note: Newlines and tabs are handled (1 tab = 4 spaces).
-void screenText(ddStrParam str,
-                ddVec3Param pos,
-                ddVec3Param color,
+void screenText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+                const char * str,
+                ddVec3_In pos,
+                ddVec3_In color,
                 float scaling = 1.0f,
                 int durationMillis = 0);
 
@@ -368,10 +516,11 @@ void screenText(ddStrParam str,
 // gets projected to screen-space. The label always faces the viewer.
 // sx/sy, sw/sh are the viewport coordinates/size, in pixels.
 // 'vpMatrix' is the view * projection transform to map the text from 3D to 2D.
-void projectedText(ddStrParam str,
-                   ddVec3Param pos,
-                   ddVec3Param color,
-                   ddMat4x4Param vpMatrix,
+void projectedText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+                   const char * str,
+                   ddVec3_In pos,
+                   ddVec3_In color,
+                   ddMat4x4_In vpMatrix,
                    int sx, int sy,
                    int sw, int sh,
                    float scaling = 1.0f,
@@ -379,16 +528,19 @@ void projectedText(ddStrParam str,
 
 // Add a set of three coordinate axis depicting the position and orientation of the given transform.
 // 'size' defines the size of the arrow heads. 'length' defines the length of the arrow's base line.
-void axisTriad(ddMat4x4Param transform,
-               float size, float length,
+void axisTriad(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+               ddMat4x4_In transform,
+               float size,
+               float length,
                int durationMillis = 0,
                bool depthEnabled = true);
 
 // Add a 3D line with an arrow-like end to the debug draw queue.
 // 'size' defines the arrow head size. 'from' and 'to' the length of the arrow's base line.
-void arrow(ddVec3Param from,
-           ddVec3Param to,
-           ddVec3Param color,
+void arrow(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+           ddVec3_In from,
+           ddVec3_In to,
+           ddVec3_In color,
            float size,
            int durationMillis = 0,
            bool depthEnabled = true);
@@ -396,15 +548,17 @@ void arrow(ddVec3Param from,
 // Add an axis-aligned cross (3 lines converging at a point) to the debug draw queue.
 // 'length' defines the length of the crossing lines.
 // 'center' is the world-space point where the lines meet.
-void cross(ddVec3Param center,
+void cross(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+           ddVec3_In center,
            float length,
            int durationMillis = 0,
            bool depthEnabled = true);
 
 // Add a wireframe circle to the debug draw queue.
-void circle(ddVec3Param center,
-            ddVec3Param planeNormal,
-            ddVec3Param color,
+void circle(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+            ddVec3_In center,
+            ddVec3_In planeNormal,
+            ddVec3_In color,
             float radius,
             float numSteps,
             int durationMillis = 0,
@@ -412,18 +566,20 @@ void circle(ddVec3Param center,
 
 // Add a wireframe plane in 3D space to the debug draw queue.
 // If 'normalVecScale' is not zero, a line depicting the plane normal is also draw.
-void plane(ddVec3Param center,
-           ddVec3Param planeNormal,
-           ddVec3Param planeColor,
-           ddVec3Param normalVecColor,
+void plane(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+           ddVec3_In center,
+           ddVec3_In planeNormal,
+           ddVec3_In planeColor,
+           ddVec3_In normalVecColor,
            float planeScale,
            float normalVecScale,
            int durationMillis = 0,
            bool depthEnabled = true);
 
 // Add a wireframe sphere to the debug draw queue.
-void sphere(ddVec3Param center,
-            ddVec3Param color,
+void sphere(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+            ddVec3_In center,
+            ddVec3_In color,
             float radius,
             int durationMillis = 0,
             bool depthEnabled = true);
@@ -432,23 +588,26 @@ void sphere(ddVec3Param center,
 // The cone 'apex' is the point where all lines meet.
 // The length of the 'dir' vector determines the thickness.
 // 'baseRadius' & 'apexRadius' are in degrees.
-void cone(ddVec3Param apex,
-          ddVec3Param dir,
-          ddVec3Param color,
+void cone(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+          ddVec3_In apex,
+          ddVec3_In dir,
+          ddVec3_In color,
           float baseRadius,
           float apexRadius,
           int durationMillis = 0,
           bool depthEnabled = true);
 
 // Wireframe box from the eight points that define it.
-void box(const ddVec3 points[8],
-         ddVec3Param color,
+void box(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+         const ddVec3 points[8],
+         ddVec3_In color,
          int durationMillis = 0,
          bool depthEnabled = true);
 
 // Add a wireframe box to the debug draw queue.
-void box(ddVec3Param center,
-         ddVec3Param color,
+void box(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+         ddVec3_In center,
+         ddVec3_In color,
          float width,
          float height,
          float depth,
@@ -456,9 +615,10 @@ void box(ddVec3Param center,
          bool depthEnabled = true);
 
 // Add a wireframe Axis Aligned Bounding Box (AABB) to the debug draw queue.
-void aabb(ddVec3Param mins,
-          ddVec3Param maxs,
-          ddVec3Param color,
+void aabb(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+          ddVec3_In mins,
+          ddVec3_In maxs,
+          ddVec3_In color,
           int durationMillis = 0,
           bool depthEnabled = true);
 
@@ -466,15 +626,17 @@ void aabb(ddVec3Param mins,
 // 'invClipMatrix' is the inverse of the matrix defining the frustum
 // (AKA clip) volume, which normally consists of the projection * view matrix.
 // E.g.: inverse(projMatrix * viewMatrix)
-void frustum(ddMat4x4Param invClipMatrix,
-             ddVec3Param color,
+void frustum(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+             ddMat4x4_In invClipMatrix,
+             ddVec3_In color,
              int durationMillis = 0,
              bool depthEnabled = true);
 
 // Add a vertex normal for debug visualization.
 // The normal vector 'normal' is assumed to be already normalized.
-void vertexNormal(ddVec3Param origin,
-                  ddVec3Param normal,
+void vertexNormal(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+                  ddVec3_In origin,
+                  ddVec3_In normal,
                   float length,
                   int durationMillis = 0,
                   bool depthEnabled = true);
@@ -482,10 +644,11 @@ void vertexNormal(ddVec3Param origin,
 // Add a "tangent basis" at a given point in world space.
 // Color scheme used is: normal=WHITE, tangent=YELLOW, bi-tangent=MAGENTA.
 // The normal vector, tangent and bi-tangent vectors are assumed to be already normalized.
-void tangentBasis(ddVec3Param origin,
-                  ddVec3Param normal,
-                  ddVec3Param tangent,
-                  ddVec3Param bitangent,
+void tangentBasis(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+                  ddVec3_In origin,
+                  ddVec3_In normal,
+                  ddVec3_In tangent,
+                  ddVec3_In bitangent,
                   float lengths,
                   int durationMillis = 0,
                   bool depthEnabled = true);
@@ -494,9 +657,12 @@ void tangentBasis(ddVec3Param origin,
 // 'y' defines the height in the Y axis where the grid is placed.
 // The grid will go from 'mins' to 'maxs' units in both the X and Z.
 // 'step' defines the gap between each line of the grid.
-void xzSquareGrid(float mins, float maxs,
-                  float y,    float step,
-                  ddVec3Param color,
+void xzSquareGrid(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+                  float mins,
+                  float maxs,
+                  float y,
+                  float step,
+                  ddVec3_In color,
                   int durationMillis = 0,
                   bool depthEnabled = true);
 
@@ -572,7 +738,7 @@ public:
     // If you don't wish to support a given primitive type, don't override the method.
     //
     virtual void drawPointList(const DrawVertex * points, int count, bool depthEnabled);
-    virtual void drawLineList (const DrawVertex * lines,  int count, bool depthEnabled);
+    virtual void drawLineList(const DrawVertex * lines, int count, bool depthEnabled);
     virtual void drawGlyphList(const DrawVertex * glyphs, int count, GlyphTextureHandle glyphTex);
 
     // User defined cleanup. Nothing by default.
@@ -596,27 +762,31 @@ enum FlushFlags
 // Given object must remain valid until after dd::shutdown() is called!
 // If 'renderer' is null, the Debug Draw functions become no-ops, but
 // can still be safely called.
-void initialize(RenderInterface * renderer);
+bool initialize(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle * outCtx,) RenderInterface * renderer);
 
-// After this is called, it is safe to dispose the RenderInterface instance
+// After this is called, it is safe to dispose the dd::RenderInterface instance
 // you passed to dd::initialize(). Shutdown will also attempt to free the glyph texture.
-void shutdown();
+void shutdown(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx));
+
+// Test if the Debug Draw library is currently initialized and has a render interface.
+bool isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx));
 
 // Test if there's data in the debug draw queue and dd::flush() should be called.
-bool hasPendingDraws();
-
-// Actually calls the RenderInterface to consume the debug draw queues.
-// Objects that have expired their lifetimes get removed.
-// Pass the current application time in milliseconds to remove
-// timed objects that have expired. Passing zero removes all
-// objects after they get drawn, regardless of lifetime.
-void flush(ddI64 currTimeMillis, int flags = FlushAll);
+bool hasPendingDraws(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx));
 
 // Manually removes all queued debug render data without drawing.
 // This is not normally called. To draw stuff, call dd::flush() instead.
-void clear();
+void clear(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx));
 
-} // namespace dd {}
+// Actually calls the dd::RenderInterface to consume the debug draw queues.
+// Objects that have expired their lifetimes get removed. Pass the current
+// application time in milliseconds to remove timed objects that have expired.
+// Passing zero removes all objects after they get drawn, regardless of lifetime.
+void flush(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+           std::int64_t currTimeMillis = 0,
+           std::uint32_t flags = FlushAll);
+
+} // namespace dd
 
 // ================== End of header file ==================
 #endif // DEBUG_DRAW_HPP
@@ -630,117 +800,209 @@ void clear();
 
 #ifdef DEBUG_DRAW_IMPLEMENTATION
 
-//
-// Suppresses
-//   "declaration requires an exit-time destructor [-Wexit-time-destructors]"
-// and
-//   "declaration requires a global constructor [-Wglobal-constructors]"
-// on Clang/llvm-GCC.
-//
-// We declare static file-level arrays
-// for the debug strings, lines and points, which
-// might have constructors/destructors if redefined
-// by the library user. Our default DebugString type
-// uses std::string, so it has an implicit constructor
-// and destructor pair, which also triggers these two
-// warnings if they are enabled.
-//
-#ifdef __clang__
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wexit-time-destructors"
-    #pragma clang diagnostic ignored "-Wglobal-constructors"
-#endif // __clang__
-
-// ========================================================
-// The DD_* macros are for internal use and get
-// #undefined at the end of the implementation.
-// ========================================================
-
-//
-// C++11 goodies:
-//
-#if DEBUG_DRAW_CXX11_SUPPORTED
-    #include <utility>
-    #define DD_MOVE(expr) std::move(expr)
-    #define DD_NULL       nullptr
-#else // !C++11
-    #include <cstddef>
-    #define DD_MOVE(expr) expr
-    #define DD_NULL       NULL
-#endif // DEBUG_DRAW_CXX11_SUPPORTED
-
-//
-// These are internal and only required for the glyph bitmap texture setup,
-// but the user can still override and provided custom allocators if needed.
-//
 #ifndef DD_MALLOC
     #include <cstdlib>
     #define DD_MALLOC std::malloc
     #define DD_MFREE  std::free
 #endif // DD_MALLOC
 
-//
-// Optional math.h replacements if you want to avoid the dependency:
-//
 #if DEBUG_DRAW_USE_STD_MATH
     #include <math.h>
     #include <float.h>
-    #ifdef FLT_EPSILON
-        #define DD_EPSILON FLT_EPSILON
-    #else // !FLT_EPSILON
-        #define DD_EPSILON 1e-14
-    #endif // FLT_EPSILON
-    #ifdef M_PI
-        #define DD_PI M_PI
-    #else // !M_PI
-        #define DD_PI 3.1415926535897931f
-    #endif // M_PI
-    // NOTE: Using the *f suffix ones because some platforms might not support
-    // double precision (e.g. PS2), where these are the only ones available.
-    #define DD_FABS(x)       fabsf(x)
-    #define DD_FSIN(radians) sinf(radians)
-    #define DD_FCOS(radians) cosf(radians)
-    #define DD_INV_FSQRT(x)  (1.0f / sqrtf(x))
-#else // !DEBUG_DRAW_USE_STD_MATH
-    #define DD_EPSILON       1e-14
-    #define DD_PI            3.1415926535897931f
-    #define DD_FABS(x)       fastFabs(x)
-    #define DD_FSIN(radians) fastSin(radians)
-    #define DD_FCOS(radians) fastCos(radians)
-    #define DD_INV_FSQRT(x)  fastInvSqrt(x)
 #endif // DEBUG_DRAW_USE_STD_MATH
-
-//
-// Misc helpers:
-//
-#define DD_TAU              (DD_PI * 2.0f)
-#define DD_DEG2RAD(degrees) (static_cast<float>(degrees) * DD_PI / 180.0f)
-#define DD_ARRAY_LEN(arr)   (static_cast<int>(sizeof(arr) / sizeof((arr)[0])))
-#define DD_CHECK_INIT       if (g_renderInterface == DD_NULL) { return; }
 
 namespace dd
 {
 
-// Implementation internals will be members of the unnamed namespace.
-namespace
+#if defined(FLT_EPSILON) && DEBUG_DRAW_USE_STD_MATH
+    static const float FloatEpsilon = FLT_EPSILON;
+#else // !FLT_EPSILON || !DEBUG_DRAW_USE_STD_MATH
+    static const float FloatEpsilon = 1e-14;
+#endif // FLT_EPSILON && DEBUG_DRAW_USE_STD_MATH
+
+#if defined(M_PI) && DEBUG_DRAW_USE_STD_MATH
+    static const float PI = M_PI;
+#else // !M_PI || !DEBUG_DRAW_USE_STD_MATH
+    static const float PI = 3.1415926535897931f;
+#endif // M_PI && DEBUG_DRAW_USE_STD_MATH
+
+static const float HalfPI = PI * 0.5f;
+static const float TAU    = PI * 2.0f;
+
+static inline float degreesToRadians(const float degrees)
 {
+    return (degrees * PI / 180.0f);
+}
+
+template<typename T, int Size>
+static inline int arrayLength(const T (&)[Size])
+{
+    return Size;
+}
+
+// ========================================================
+// Built-in color constants:
+// ========================================================
+
+#ifndef DEBUG_DRAW_NO_DEFAULT_COLORS
+namespace colors
+{
+const ddVec3 AliceBlue         = {0.941176f, 0.972549f, 1.000000f};
+const ddVec3 AntiqueWhite      = {0.980392f, 0.921569f, 0.843137f};
+const ddVec3 Aquamarine        = {0.498039f, 1.000000f, 0.831373f};
+const ddVec3 Azure             = {0.941176f, 1.000000f, 1.000000f};
+const ddVec3 Beige             = {0.960784f, 0.960784f, 0.862745f};
+const ddVec3 Bisque            = {1.000000f, 0.894118f, 0.768627f};
+const ddVec3 Black             = {0.000000f, 0.000000f, 0.000000f};
+const ddVec3 BlanchedAlmond    = {1.000000f, 0.921569f, 0.803922f};
+const ddVec3 Blue              = {0.000000f, 0.000000f, 1.000000f};
+const ddVec3 BlueViolet        = {0.541176f, 0.168627f, 0.886275f};
+const ddVec3 Brown             = {0.647059f, 0.164706f, 0.164706f};
+const ddVec3 BurlyWood         = {0.870588f, 0.721569f, 0.529412f};
+const ddVec3 CadetBlue         = {0.372549f, 0.619608f, 0.627451f};
+const ddVec3 Chartreuse        = {0.498039f, 1.000000f, 0.000000f};
+const ddVec3 Chocolate         = {0.823529f, 0.411765f, 0.117647f};
+const ddVec3 Coral             = {1.000000f, 0.498039f, 0.313726f};
+const ddVec3 CornflowerBlue    = {0.392157f, 0.584314f, 0.929412f};
+const ddVec3 Cornsilk          = {1.000000f, 0.972549f, 0.862745f};
+const ddVec3 Crimson           = {0.862745f, 0.078431f, 0.235294f};
+const ddVec3 Cyan              = {0.000000f, 1.000000f, 1.000000f};
+const ddVec3 DarkBlue          = {0.000000f, 0.000000f, 0.545098f};
+const ddVec3 DarkCyan          = {0.000000f, 0.545098f, 0.545098f};
+const ddVec3 DarkGoldenRod     = {0.721569f, 0.525490f, 0.043137f};
+const ddVec3 DarkGray          = {0.662745f, 0.662745f, 0.662745f};
+const ddVec3 DarkGreen         = {0.000000f, 0.392157f, 0.000000f};
+const ddVec3 DarkKhaki         = {0.741176f, 0.717647f, 0.419608f};
+const ddVec3 DarkMagenta       = {0.545098f, 0.000000f, 0.545098f};
+const ddVec3 DarkOliveGreen    = {0.333333f, 0.419608f, 0.184314f};
+const ddVec3 DarkOrange        = {1.000000f, 0.549020f, 0.000000f};
+const ddVec3 DarkOrchid        = {0.600000f, 0.196078f, 0.800000f};
+const ddVec3 DarkRed           = {0.545098f, 0.000000f, 0.000000f};
+const ddVec3 DarkSalmon        = {0.913725f, 0.588235f, 0.478431f};
+const ddVec3 DarkSeaGreen      = {0.560784f, 0.737255f, 0.560784f};
+const ddVec3 DarkSlateBlue     = {0.282353f, 0.239216f, 0.545098f};
+const ddVec3 DarkSlateGray     = {0.184314f, 0.309804f, 0.309804f};
+const ddVec3 DarkTurquoise     = {0.000000f, 0.807843f, 0.819608f};
+const ddVec3 DarkViolet        = {0.580392f, 0.000000f, 0.827451f};
+const ddVec3 DeepPink          = {1.000000f, 0.078431f, 0.576471f};
+const ddVec3 DeepSkyBlue       = {0.000000f, 0.749020f, 1.000000f};
+const ddVec3 DimGray           = {0.411765f, 0.411765f, 0.411765f};
+const ddVec3 DodgerBlue        = {0.117647f, 0.564706f, 1.000000f};
+const ddVec3 FireBrick         = {0.698039f, 0.133333f, 0.133333f};
+const ddVec3 FloralWhite       = {1.000000f, 0.980392f, 0.941176f};
+const ddVec3 ForestGreen       = {0.133333f, 0.545098f, 0.133333f};
+const ddVec3 Gainsboro         = {0.862745f, 0.862745f, 0.862745f};
+const ddVec3 GhostWhite        = {0.972549f, 0.972549f, 1.000000f};
+const ddVec3 Gold              = {1.000000f, 0.843137f, 0.000000f};
+const ddVec3 GoldenRod         = {0.854902f, 0.647059f, 0.125490f};
+const ddVec3 Gray              = {0.501961f, 0.501961f, 0.501961f};
+const ddVec3 Green             = {0.000000f, 0.501961f, 0.000000f};
+const ddVec3 GreenYellow       = {0.678431f, 1.000000f, 0.184314f};
+const ddVec3 HoneyDew          = {0.941176f, 1.000000f, 0.941176f};
+const ddVec3 HotPink           = {1.000000f, 0.411765f, 0.705882f};
+const ddVec3 IndianRed         = {0.803922f, 0.360784f, 0.360784f};
+const ddVec3 Indigo            = {0.294118f, 0.000000f, 0.509804f};
+const ddVec3 Ivory             = {1.000000f, 1.000000f, 0.941176f};
+const ddVec3 Khaki             = {0.941176f, 0.901961f, 0.549020f};
+const ddVec3 Lavender          = {0.901961f, 0.901961f, 0.980392f};
+const ddVec3 LavenderBlush     = {1.000000f, 0.941176f, 0.960784f};
+const ddVec3 LawnGreen         = {0.486275f, 0.988235f, 0.000000f};
+const ddVec3 LemonChiffon      = {1.000000f, 0.980392f, 0.803922f};
+const ddVec3 LightBlue         = {0.678431f, 0.847059f, 0.901961f};
+const ddVec3 LightCoral        = {0.941176f, 0.501961f, 0.501961f};
+const ddVec3 LightCyan         = {0.878431f, 1.000000f, 1.000000f};
+const ddVec3 LightGoldenYellow = {0.980392f, 0.980392f, 0.823529f};
+const ddVec3 LightGray         = {0.827451f, 0.827451f, 0.827451f};
+const ddVec3 LightGreen        = {0.564706f, 0.933333f, 0.564706f};
+const ddVec3 LightPink         = {1.000000f, 0.713726f, 0.756863f};
+const ddVec3 LightSalmon       = {1.000000f, 0.627451f, 0.478431f};
+const ddVec3 LightSeaGreen     = {0.125490f, 0.698039f, 0.666667f};
+const ddVec3 LightSkyBlue      = {0.529412f, 0.807843f, 0.980392f};
+const ddVec3 LightSlateGray    = {0.466667f, 0.533333f, 0.600000f};
+const ddVec3 LightSteelBlue    = {0.690196f, 0.768627f, 0.870588f};
+const ddVec3 LightYellow       = {1.000000f, 1.000000f, 0.878431f};
+const ddVec3 Lime              = {0.000000f, 1.000000f, 0.000000f};
+const ddVec3 LimeGreen         = {0.196078f, 0.803922f, 0.196078f};
+const ddVec3 Linen             = {0.980392f, 0.941176f, 0.901961f};
+const ddVec3 Magenta           = {1.000000f, 0.000000f, 1.000000f};
+const ddVec3 Maroon            = {0.501961f, 0.000000f, 0.000000f};
+const ddVec3 MediumAquaMarine  = {0.400000f, 0.803922f, 0.666667f};
+const ddVec3 MediumBlue        = {0.000000f, 0.000000f, 0.803922f};
+const ddVec3 MediumOrchid      = {0.729412f, 0.333333f, 0.827451f};
+const ddVec3 MediumPurple      = {0.576471f, 0.439216f, 0.858824f};
+const ddVec3 MediumSeaGreen    = {0.235294f, 0.701961f, 0.443137f};
+const ddVec3 MediumSlateBlue   = {0.482353f, 0.407843f, 0.933333f};
+const ddVec3 MediumSpringGreen = {0.000000f, 0.980392f, 0.603922f};
+const ddVec3 MediumTurquoise   = {0.282353f, 0.819608f, 0.800000f};
+const ddVec3 MediumVioletRed   = {0.780392f, 0.082353f, 0.521569f};
+const ddVec3 MidnightBlue      = {0.098039f, 0.098039f, 0.439216f};
+const ddVec3 MintCream         = {0.960784f, 1.000000f, 0.980392f};
+const ddVec3 MistyRose         = {1.000000f, 0.894118f, 0.882353f};
+const ddVec3 Moccasin          = {1.000000f, 0.894118f, 0.709804f};
+const ddVec3 NavajoWhite       = {1.000000f, 0.870588f, 0.678431f};
+const ddVec3 Navy              = {0.000000f, 0.000000f, 0.501961f};
+const ddVec3 OldLace           = {0.992157f, 0.960784f, 0.901961f};
+const ddVec3 Olive             = {0.501961f, 0.501961f, 0.000000f};
+const ddVec3 OliveDrab         = {0.419608f, 0.556863f, 0.137255f};
+const ddVec3 Orange            = {1.000000f, 0.647059f, 0.000000f};
+const ddVec3 OrangeRed         = {1.000000f, 0.270588f, 0.000000f};
+const ddVec3 Orchid            = {0.854902f, 0.439216f, 0.839216f};
+const ddVec3 PaleGoldenRod     = {0.933333f, 0.909804f, 0.666667f};
+const ddVec3 PaleGreen         = {0.596078f, 0.984314f, 0.596078f};
+const ddVec3 PaleTurquoise     = {0.686275f, 0.933333f, 0.933333f};
+const ddVec3 PaleVioletRed     = {0.858824f, 0.439216f, 0.576471f};
+const ddVec3 PapayaWhip        = {1.000000f, 0.937255f, 0.835294f};
+const ddVec3 PeachPuff         = {1.000000f, 0.854902f, 0.725490f};
+const ddVec3 Peru              = {0.803922f, 0.521569f, 0.247059f};
+const ddVec3 Pink              = {1.000000f, 0.752941f, 0.796078f};
+const ddVec3 Plum              = {0.866667f, 0.627451f, 0.866667f};
+const ddVec3 PowderBlue        = {0.690196f, 0.878431f, 0.901961f};
+const ddVec3 Purple            = {0.501961f, 0.000000f, 0.501961f};
+const ddVec3 RebeccaPurple     = {0.400000f, 0.200000f, 0.600000f};
+const ddVec3 Red               = {1.000000f, 0.000000f, 0.000000f};
+const ddVec3 RosyBrown         = {0.737255f, 0.560784f, 0.560784f};
+const ddVec3 RoyalBlue         = {0.254902f, 0.411765f, 0.882353f};
+const ddVec3 SaddleBrown       = {0.545098f, 0.270588f, 0.074510f};
+const ddVec3 Salmon            = {0.980392f, 0.501961f, 0.447059f};
+const ddVec3 SandyBrown        = {0.956863f, 0.643137f, 0.376471f};
+const ddVec3 SeaGreen          = {0.180392f, 0.545098f, 0.341176f};
+const ddVec3 SeaShell          = {1.000000f, 0.960784f, 0.933333f};
+const ddVec3 Sienna            = {0.627451f, 0.321569f, 0.176471f};
+const ddVec3 Silver            = {0.752941f, 0.752941f, 0.752941f};
+const ddVec3 SkyBlue           = {0.529412f, 0.807843f, 0.921569f};
+const ddVec3 SlateBlue         = {0.415686f, 0.352941f, 0.803922f};
+const ddVec3 SlateGray         = {0.439216f, 0.501961f, 0.564706f};
+const ddVec3 Snow              = {1.000000f, 0.980392f, 0.980392f};
+const ddVec3 SpringGreen       = {0.000000f, 1.000000f, 0.498039f};
+const ddVec3 SteelBlue         = {0.274510f, 0.509804f, 0.705882f};
+const ddVec3 Tan               = {0.823529f, 0.705882f, 0.549020f};
+const ddVec3 Teal              = {0.000000f, 0.501961f, 0.501961f};
+const ddVec3 Thistle           = {0.847059f, 0.749020f, 0.847059f};
+const ddVec3 Tomato            = {1.000000f, 0.388235f, 0.278431f};
+const ddVec3 Turquoise         = {0.250980f, 0.878431f, 0.815686f};
+const ddVec3 Violet            = {0.933333f, 0.509804f, 0.933333f};
+const ddVec3 Wheat             = {0.960784f, 0.870588f, 0.701961f};
+const ddVec3 White             = {1.000000f, 1.000000f, 1.000000f};
+const ddVec3 WhiteSmoke        = {0.960784f, 0.960784f, 0.960784f};
+const ddVec3 Yellow            = {1.000000f, 1.000000f, 0.000000f};
+const ddVec3 YellowGreen       = {0.603922f, 0.803922f, 0.196078f};
+} // namespace colors
+#endif // DEBUG_DRAW_NO_DEFAULT_COLORS
 
 // ========================================================
 // Embedded bitmap font for debug text rendering:
 // ========================================================
 
-typedef unsigned char UByte;
-
 struct FontChar
 {
-    unsigned short x;
-    unsigned short y;
+    std::uint16_t x;
+    std::uint16_t y;
 };
 
 struct FontCharSet
 {
     enum { MaxChars = 256 };
-    const UByte * bitmap;
+    const std::uint8_t * bitmap;
     int bitmapWidth;
     int bitmapHeight;
     int bitmapColorChannels;
@@ -753,14 +1015,14 @@ struct FontCharSet
 };
 
 #if DEBUG_DRAW_CXX11_SUPPORTED
-    #define DD_ALIGNED_BUFFER(name) alignas(16) static const UByte name[]
+    #define DD_ALIGNED_BUFFER(name) alignas(16) static const std::uint8_t name[]
 #else // !C++11
     #if defined(__GNUC__) // Clang & GCC
-        #define DD_ALIGNED_BUFFER(name) static const UByte name[] __attribute__((aligned(16)))
+        #define DD_ALIGNED_BUFFER(name) static const std::uint8_t name[] __attribute__((aligned(16)))
     #elif defined(_MSC_VER) // Visual Studio
-        #define DD_ALIGNED_BUFFER(name) __declspec(align(16)) static const UByte name[]
+        #define DD_ALIGNED_BUFFER(name) __declspec(align(16)) static const std::uint8_t name[]
     #else // Unknown compiler
-        #define DD_ALIGNED_BUFFER(name) static const UByte name[] /* hope for the best! */
+        #define DD_ALIGNED_BUFFER(name) static const std::uint8_t name[] /* hope for the best! */
     #endif // Compiler id
 #endif // DEBUG_DRAW_CXX11_SUPPORTED
 
@@ -780,7 +1042,7 @@ struct FontCharSet
 // font-tool: https://github.com/glampert/font-tool
 // LZW compression: https://github.com/glampert/compression-algorithms
 //
-DD_ALIGNED_BUFFER(g_fontMonoid18Bitmap) =
+DD_ALIGNED_BUFFER(s_fontMonoid18Bitmap) =
 "\x2F\x1E\x00\x00\x78\xF1\x00\x00\x00\x00\x06\x14\x38\x90\x60\x41\x83\x07\x11\x26\x54\xB8"
 "\x90\x61\x43\x87\x0F\x21\x46\x94\x38\x91\x62\x45\x8B\x17\x31\x66\xD4\x88\x70\x43\x13\x8C"
 "\x15\x80\x0D\xD8\x98\x10\x0D\x98\x84\x4D\x36\x8C\x8C\x28\x40\xC1\x01\x95\x2F\x1F\x06\x10"
@@ -1135,8 +1397,8 @@ DD_ALIGNED_BUFFER(g_fontMonoid18Bitmap) =
 "\x3F\xFD\xEA\x5F\x3F\xFB\xDB\xEF\xFE\xF7\xC3\xFF\xF8";
 #undef DD_ALIGNED_BUFFER
 
-static const FontCharSet g_fontMonoid18CharSet = {
-  /* bitmap               = */ g_fontMonoid18Bitmap,
+static const FontCharSet s_fontMonoid18CharSet = {
+  /* bitmap               = */ s_fontMonoid18Bitmap,
   /* bitmapWidth          = */ 256,
   /* bitmapHeight         = */ 256,
   /* bitmapColorChannels  = */ 1,
@@ -1244,21 +1506,21 @@ struct LzwDictionary
 
 struct LzwBitStreamReader
 {
-    const UByte * stream; // Pointer to the external bit stream. Not owned by the reader.
-    int sizeInBytes;      // Size of the stream in bytes. Might include padding.
-    int sizeInBits;       // Size of the stream in bits, padding not include.
-    int currBytePos;      // Current byte being read in the stream.
-    int nextBitPos;       // Bit position within the current byte to access next. 0 to 7.
-    int numBitsRead;      // Total bits read from the stream so far. Never includes byte-rounding.
+    const std::uint8_t * stream; // Pointer to the external bit stream. Not owned by the reader.
+    int sizeInBytes;             // Size of the stream in bytes. Might include padding.
+    int sizeInBits;              // Size of the stream in bits, padding not include.
+    int currBytePos;             // Current byte being read in the stream.
+    int nextBitPos;              // Bit position within the current byte to access next. 0 to 7.
+    int numBitsRead;             // Total bits read from the stream so far. Never includes byte-rounding.
 
-    LzwBitStreamReader(const UByte * bitStream, int byteCount, int bitCount);
+    LzwBitStreamReader(const std::uint8_t * bitStream, int byteCount, int bitCount);
     bool readNextBit(int & outBit);
     int readBits(int bitCount);
 };
 
-//
-// LzwDictionary implementation:
-//
+// ========================================================
+// LzwDictionary:
+// ========================================================
 
 LzwDictionary::LzwDictionary()
 {
@@ -1317,11 +1579,11 @@ bool LzwDictionary::flush(int & codeBitsWidth)
     return false;
 }
 
-//
-// LzwBitStreamReader implementation:
-//
+// ========================================================
+// LzwBitStreamReader:
+// ========================================================
 
-LzwBitStreamReader::LzwBitStreamReader(const UByte * bitStream, const int byteCount, const int bitCount)
+LzwBitStreamReader::LzwBitStreamReader(const std::uint8_t * bitStream, const int byteCount, const int bitCount)
     : stream(bitStream)
     , sizeInBytes(byteCount)
     , sizeInBits(bitCount)
@@ -1369,23 +1631,29 @@ int LzwBitStreamReader::readBits(const int bitCount)
 // lzwDecompress() and helpers:
 // ========================================================
 
-bool lzwOutputByte(int code, UByte *& output, int outputSizeBytes, int & bytesDecodedSoFar)
+static bool lzwOutputByte(int code, std::uint8_t *& output, int outputSizeBytes, int & bytesDecodedSoFar)
 {
-    if (code < 0 || code >= 256) { return false; }
-    if (bytesDecodedSoFar >= outputSizeBytes) { return false; }
-    *output++ = static_cast<UByte>(code);
+    if (code < 0 || code >= 256)
+    {
+        return false;
+    }
+    if (bytesDecodedSoFar >= outputSizeBytes)
+    {
+        return false;
+    }
+    *output++ = static_cast<std::uint8_t>(code);
     ++bytesDecodedSoFar;
     return true;
 }
 
-bool lzwOutputSequence(const LzwDictionary & dict, int code,
-                       UByte *& output, int outputSizeBytes,
-                       int & bytesDecodedSoFar, int & firstByte)
+static bool lzwOutputSequence(const LzwDictionary & dict, int code,
+                              std::uint8_t *& output, int outputSizeBytes,
+                              int & bytesDecodedSoFar, int & firstByte)
 {
     // A sequence is stored backwards, so we have to write
     // it to a temp then output the buffer in reverse.
     int i = 0;
-    UByte sequence[LzwMaxDictEntries];
+    std::uint8_t sequence[LzwMaxDictEntries];
     do
     {
         sequence[i++] = dict.entries[code].value & 0xFF;
@@ -1403,11 +1671,11 @@ bool lzwOutputSequence(const LzwDictionary & dict, int code,
     return true;
 }
 
-int lzwDecompress(const void * compressedData, int compressedSizeBytes,
-                  int compressedSizeBits, void * uncompressedData,
-                  int uncompressedSizeBytes)
+static int lzwDecompress(const void * compressedData, int compressedSizeBytes,
+                         int compressedSizeBits, void * uncompressedData,
+                         int uncompressedSizeBytes)
 {
-    if (compressedData == DD_NULL || uncompressedData == DD_NULL)
+    if (compressedData == nullptr || uncompressedData == nullptr)
     {
         return 0;
     }
@@ -1422,8 +1690,8 @@ int lzwDecompress(const void * compressedData, int compressedSizeBytes,
     int firstByte     = 0;
     int bytesDecoded  = 0;
 
-    const UByte * compressedPtr = reinterpret_cast<const UByte *>(compressedData);
-    UByte * uncompressedPtr = reinterpret_cast<UByte *>(uncompressedData);
+    const std::uint8_t * compressedPtr = reinterpret_cast<const std::uint8_t *>(compressedData);
+    std::uint8_t * uncompressedPtr = reinterpret_cast<std::uint8_t *>(uncompressedData);
 
     // We'll reconstruct the dictionary based on the bit stream codes.
     LzwBitStreamReader bitStream(compressedPtr, compressedSizeBytes, compressedSizeBits);
@@ -1495,14 +1763,14 @@ int lzwDecompress(const void * compressedData, int compressedSizeBytes,
 // ========================================================
 
 // If you decide to change the font, these are the only things that
-// need to be updated. The g_fontXYZ variables are never referenced
+// need to be updated. The s_font* variables are never referenced
 // directly in the code, these functions are used instead.
-inline const UByte * getRawFontBitmapData() { return g_fontMonoid18Bitmap;  }
-inline const FontCharSet & getFontCharSet() { return g_fontMonoid18CharSet; }
+static inline const std::uint8_t * getRawFontBitmapData() { return s_fontMonoid18Bitmap;  }
+static inline const FontCharSet  & getFontCharSet()       { return s_fontMonoid18CharSet; }
 
-UByte * decompressFontBitmap()
+static std::uint8_t * decompressFontBitmap()
 {
-    const ddU32 * compressedData = reinterpret_cast<const ddU32 *>(getRawFontBitmapData());
+    const std::uint32_t * compressedData = reinterpret_cast<const std::uint32_t *>(getRawFontBitmapData());
 
     // First two uint32s are the compressed size in
     // bytes followed by the compressed size in bits.
@@ -1511,12 +1779,12 @@ UByte * decompressFontBitmap()
 
     // Allocate the decompression buffer:
     const int uncompressedSizeBytes = getFontCharSet().bitmapDecompressSize;
-    UByte * uncompressedData = reinterpret_cast<UByte *>(DD_MALLOC(uncompressedSizeBytes));
+    std::uint8_t * uncompressedData = static_cast<std::uint8_t *>(DD_MALLOC(uncompressedSizeBytes));
 
     // Out of memory? Font rendering will be disable.
-    if (uncompressedData == DD_NULL)
+    if (uncompressedData == nullptr)
     {
-        return DD_NULL;
+        return nullptr;
     }
 
     // Decode the bitmap pixels (stored with an LZW-flavor of compression):
@@ -1530,7 +1798,7 @@ UByte * decompressFontBitmap()
     if (bytesDecoded != uncompressedSizeBytes)
     {
         DD_MFREE(uncompressedData);
-        return DD_NULL;
+        return nullptr;
     }
 
     // Must later free with DD_MFREE().
@@ -1538,77 +1806,124 @@ UByte * decompressFontBitmap()
 }
 
 // ========================================================
-// Internal Debug Draw queue and helper types/functions:
+// Internal Debug Draw queues and helper types/functions:
 // ========================================================
 
 struct DebugString
 {
-    ddI64  expiryDateMillis;
-    ddVec3 color;
-    float  posX;
-    float  posY;
-    float  scaling;
-    ddStr  text;
-    bool   centered;
+    std::int64_t expiryDateMillis;
+    ddVec3       color;
+    float        posX;
+    float        posY;
+    float        scaling;
+    ddStr        text;
+    bool         centered;
 };
 
 struct DebugPoint
 {
-    ddI64  expiryDateMillis;
-    ddVec3 position;
-    ddVec3 color;
-    float  size;
-    bool   depthEnabled;
+    std::int64_t expiryDateMillis;
+    ddVec3       position;
+    ddVec3       color;
+    float        size;
+    bool         depthEnabled;
 };
 
 struct DebugLine
 {
-    ddI64  expiryDateMillis;
-    ddVec3 posFrom;
-    ddVec3 posTo;
-    ddVec3 color;
-    bool   depthEnabled;
+    std::int64_t expiryDateMillis;
+    ddVec3       posFrom;
+    ddVec3       posTo;
+    ddVec3       color;
+    bool         depthEnabled;
 };
 
-// Debug strings queue (2D screen-space strings + 3D projected labels):
-static int g_debugStringsCount = 0;
-static DebugString g_debugStrings[DEBUG_DRAW_MAX_STRINGS];
+struct InternalContext DD_EXPLICIT_CONTEXT_ONLY(: public OpaqueContextType)
+{
+    int                vertexBufferUsed;
+    int                debugStringsCount;
+    int                debugPointsCount;
+    int                debugLinesCount;
+    std::int64_t       currentTimeMillis;                           // Latest time value (in milliseconds) from dd::flush().
+    GlyphTextureHandle glyphTexHandle;                              // Our built-in glyph bitmap. If kept null, no text is rendered.
+    RenderInterface *  renderInterface;                             // Ref to the external renderer. Can be null for a no-op debug draw.
+    DrawVertex         vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE]; // Vertex buffer we use to expand the lines/points before calling on RenderInterface.
+    DebugString        debugStrings[DEBUG_DRAW_MAX_STRINGS];        // Debug strings queue (2D screen-space strings + 3D projected labels).
+    DebugPoint         debugPoints[DEBUG_DRAW_MAX_POINTS];          // 3D debug points queue.
+    DebugLine          debugLines[DEBUG_DRAW_MAX_LINES];            // 3D debug lines queue.
 
-// 3D debug points queue:
-static int g_debugPointsCount = 0;
-static DebugPoint g_debugPoints[DEBUG_DRAW_MAX_POINTS];
-
-// 3D debug lines queue:
-static int g_debugLinesCount = 0;
-static DebugLine g_debugLines[DEBUG_DRAW_MAX_LINES];
-
-// Temporary vertex buffer we use to expand the lines/points before calling on RenderInterface.
-static int g_vertexBufferUsed = 0;
-static DrawVertex g_vertexBuffer[DEBUG_DRAW_VERTEX_BUFFER_SIZE];
-
-// Latest time value (in milliseconds) from dd::flush().
-static ddI64 g_currentTimeMillis = 0;
-
-// Ref to the external renderer. Can be null for a no-op debug draw.
-static RenderInterface * g_renderInterface = DD_NULL;
-
-// Our built-in glyph bitmap. If kept null, no text is rendered.
-static GlyphTextureHandle g_glyphTex = DD_NULL;
+    InternalContext(RenderInterface * renderer)
+        : vertexBufferUsed(0)
+        , debugStringsCount(0)
+        , debugPointsCount(0)
+        , debugLinesCount(0)
+        , currentTimeMillis(0)
+        , glyphTexHandle(nullptr)
+        , renderInterface(renderer)
+    { }
+};
 
 // ========================================================
-// Fast approximations of math functions used by DD.
+// Library context mode selection:
 // ========================================================
 
-// We only need these if the user didn't want the math.h dependency.
-#if !DEBUG_DRAW_USE_STD_MATH
+#if (defined(DEBUG_DRAW_PER_THREAD_CONTEXT) && defined(DEBUG_DRAW_EXPLICIT_CONTEXT))
+    #error "DEBUG_DRAW_PER_THREAD_CONTEXT and DEBUG_DRAW_EXPLICIT_CONTEXT are mutually exclusive!"
+#endif // DEBUG_DRAW_PER_THREAD_CONTEXT && DEBUG_DRAW_EXPLICIT_CONTEXT
+
+#if defined(DEBUG_DRAW_EXPLICIT_CONTEXT)
+    //
+    // Explicit context passed as argument
+    //
+    #define DD_CONTEXT static_cast<InternalContext *>(ctx)
+#elif defined(DEBUG_DRAW_PER_THREAD_CONTEXT)
+    //
+    // Per-thread global context (MT safe)
+    //
+    #if defined(__GNUC__) || defined(__clang__) // GCC/Clang
+        #define DD_THREAD_LOCAL static __thread
+    #elif defined(_MSC_VER) // Visual Studio
+        #define DD_THREAD_LOCAL static __declspec(thread)
+    #else // Try C++11 thread_local
+        #if DEBUG_DRAW_CXX11_SUPPORTED
+            #define DD_THREAD_LOCAL static thread_local
+        #else // !DEBUG_DRAW_CXX11_SUPPORTED
+            #error "Unsupported compiler - unknown TLS model"
+        #endif // DEBUG_DRAW_CXX11_SUPPORTED
+    #endif // TLS model
+    DD_THREAD_LOCAL InternalContext * s_threadContext = nullptr;
+    #define DD_CONTEXT s_threadContext
+    #undef DD_THREAD_LOCAL
+#else // Debug Draw context selection
+    //
+    // Global static context (single threaded operation)
+    //
+    static InternalContext * s_globalContext = nullptr;
+    #define DD_CONTEXT s_globalContext
+#endif // Debug Draw context selection
+
+// ========================================================
+
+#if DEBUG_DRAW_USE_STD_MATH
+
+static inline float floatAbs(float x)       { return fabsf(x); }
+static inline float floatSin(float radians) { return sinf(radians); }
+static inline float floatCos(float radians) { return cosf(radians); }
+static inline float floatInvSqrt(float x)   { return (1.0f / sqrtf(x)); }
+
+#else // !DEBUG_DRAW_USE_STD_MATH
+
+// ========================================================
+// Fast approximations of math functions used by Debug Draw
+// ========================================================
 
 union Float2UInt
 {
     float asFloat;
-    ddU32 asUInt;
+    std::uint32_t asUInt;
 };
 
-inline float roundFloat(float x)
+static inline float floatRound(float x)
 {
     // Probably slower than std::floor(), also depends of FPU settings,
     // but we only need this for that special sin/cos() case anyways...
@@ -1616,7 +1931,7 @@ inline float roundFloat(float x)
     return (x >= 0.0f) ? static_cast<float>(i) : static_cast<float>(i - 1);
 }
 
-inline float fastFabs(float x)
+static inline float floatAbs(float x)
 {
     // Mask-off the sign bit
     Float2UInt i;
@@ -1625,7 +1940,7 @@ inline float fastFabs(float x)
     return i.asFloat;
 }
 
-inline float fastInvSqrt(float x)
+static inline float floatInvSqrt(float x)
 {
     // Modified version of the emblematic Q_rsqrt() from Quake 3.
     // See: http://en.wikipedia.org/wiki/Fast_inverse_square_root
@@ -1639,56 +1954,54 @@ inline float fastInvSqrt(float x)
     return r;
 }
 
-inline float fastSin(float radians)
+static inline float floatSin(float radians)
 {
     static const float A = -2.39e-08;
-    static const float B =  2.7526e-06;
-    static const float C =  1.98409e-04;
-    static const float D =  8.3333315e-03;
-    static const float E =  1.666666664e-01;
-    static const float HALFPI = DD_PI * 0.5f;
+    static const float B = 2.7526e-06;
+    static const float C = 1.98409e-04;
+    static const float D = 8.3333315e-03;
+    static const float E = 1.666666664e-01;
 
-    if (radians < 0.0f || radians >= DD_TAU)
+    if (radians < 0.0f || radians >= TAU)
     {
-        radians -= roundFloat(radians / DD_TAU) * DD_TAU;
+        radians -= floatRound(radians / TAU) * TAU;
     }
 
-    if (radians < DD_PI)
+    if (radians < PI)
     {
-        if (radians > HALFPI)
+        if (radians > HalfPI)
         {
-            radians = DD_PI - radians;
+            radians = PI - radians;
         }
     }
     else
     {
-        radians = (radians > (DD_PI + HALFPI)) ? (radians - DD_TAU) : (DD_PI - radians);
+        radians = (radians > (PI + HalfPI)) ? (radians - TAU) : (PI - radians);
     }
 
     const float s = radians * radians;
     return radians * (((((A * s + B) * s - C) * s + D) * s - E) * s + 1.0f);
 }
 
-inline float fastCos(float radians)
+static inline float floatCos(float radians)
 {
     static const float A = -2.605e-07;
-    static const float B =  2.47609e-05;
-    static const float C =  1.3888397e-03;
-    static const float D =  4.16666418e-02;
-    static const float E =  4.999999963e-01;
-    static const float HALFPI = DD_PI * 0.5f;
+    static const float B = 2.47609e-05;
+    static const float C = 1.3888397e-03;
+    static const float D = 4.16666418e-02;
+    static const float E = 4.999999963e-01;
 
-    if (radians < 0.0f || radians >= DD_TAU)
+    if (radians < 0.0f || radians >= TAU)
     {
-        radians -= roundFloat(radians / DD_TAU) * DD_TAU;
+        radians -= floatRound(radians / TAU) * TAU;
     }
 
     float d;
-    if (radians < DD_PI)
+    if (radians < PI)
     {
-        if (radians > HALFPI)
+        if (radians > HalfPI)
         {
-            radians = DD_PI - radians;
+            radians = PI - radians;
             d = -1.0f;
         }
         else
@@ -1698,14 +2011,14 @@ inline float fastCos(float radians)
     }
     else
     {
-        if (radians > (DD_PI + HALFPI))
+        if (radians > (PI + HalfPI))
         {
-            radians = radians - DD_TAU;
+            radians = radians - TAU;
             d = 1.0f;
         }
         else
         {
-            radians = DD_PI - radians;
+            radians = PI - radians;
             d = -1.0f;
         }
     }
@@ -1720,77 +2033,77 @@ inline float fastCos(float radians)
 // ddVec3 helpers:
 // ========================================================
 
-enum { X, Y, Z, W };
+enum VecElements { X, Y, Z, W };
 
-inline void vecSet(ddVec3 & dest, const float x, const float y, const float z)
+static inline void vecSet(ddVec3_Out dest, const float x, const float y, const float z)
 {
     dest[X] = x;
     dest[Y] = y;
     dest[Z] = z;
 }
 
-inline void vecCopy(ddVec3 & dest, ddVec3Param src)
+static inline void vecCopy(ddVec3_Out dest, ddVec3_In src)
 {
     dest[X] = src[X];
     dest[Y] = src[Y];
     dest[Z] = src[Z];
 }
 
-inline void vecAdd(ddVec3 & result, ddVec3Param a, ddVec3Param b)
+static inline void vecAdd(ddVec3_Out result, ddVec3_In a, ddVec3_In b)
 {
     result[X] = a[X] + b[X];
     result[Y] = a[Y] + b[Y];
     result[Z] = a[Z] + b[Z];
 }
 
-inline void vecSub(ddVec3 & result, ddVec3Param a, ddVec3Param b)
+static inline void vecSub(ddVec3_Out result, ddVec3_In a, ddVec3_In b)
 {
     result[X] = a[X] - b[X];
     result[Y] = a[Y] - b[Y];
     result[Z] = a[Z] - b[Z];
 }
 
-inline void vecScale(ddVec3 & result, ddVec3Param v, const float s)
+static inline void vecScale(ddVec3_Out result, ddVec3_In v, const float s)
 {
     result[X] = v[X] * s;
     result[Y] = v[Y] * s;
     result[Z] = v[Z] * s;
 }
 
-inline void vecNormalize(ddVec3 & result, ddVec3Param v)
+static inline void vecNormalize(ddVec3_Out result, ddVec3_In v)
 {
     const float lenSqr = v[X] * v[X] + v[Y] * v[Y] + v[Z] * v[Z];
-    const float invLen = DD_INV_FSQRT(lenSqr);
+    const float invLen = floatInvSqrt(lenSqr);
     result[X] = v[X] * invLen;
     result[Y] = v[Y] * invLen;
     result[Z] = v[Z] * invLen;
 }
 
-inline void vecOrthogonalBasis(ddVec3 & left, ddVec3 & up, ddVec3Param v)
+static inline void vecOrthogonalBasis(ddVec3_Out left, ddVec3_Out up, ddVec3_In v)
 {
     // Produces two orthogonal vectors for normalized vector v.
     float lenSqr, invLen;
-    if (DD_FABS(v[Z]) > 0.7f)
+    if (floatAbs(v[Z]) > 0.7f)
     {
-        lenSqr = v[Y] * v[Y] + v[Z] * v[Z];
-        invLen = DD_INV_FSQRT(lenSqr);
-        up[X] = 0.0f;
-        up[Y] =  v[Z] * invLen;
-        up[Z] = -v[Y] * invLen;
+        lenSqr  = v[Y] * v[Y] + v[Z] * v[Z];
+        invLen  = floatInvSqrt(lenSqr);
+        up[X]   = 0.0f;
+        up[Y]   =  v[Z] * invLen;
+        up[Z]   = -v[Y] * invLen;
         left[X] = lenSqr * invLen;
         left[Y] = -v[X] * up[Z];
         left[Z] =  v[X] * up[Y];
     }
     else
     {
-        lenSqr = v[X] * v[X] + v[Y] * v[Y];
-        invLen = DD_INV_FSQRT(lenSqr);
+        lenSqr  = v[X] * v[X] + v[Y] * v[Y];
+        invLen  = floatInvSqrt(lenSqr);
         left[X] = -v[Y] * invLen;
         left[Y] =  v[X] * invLen;
         left[Z] = 0.0f;
-        up[X] = -v[Z] * left[Y];
-        up[Y] =  v[Z] * left[X];
-        up[Z] = lenSqr * invLen;
+        up[X]   = -v[Z] * left[Y];
+        up[Y]   =  v[Z] * left[X];
+        up[Z]   = lenSqr * invLen;
     }
 }
 
@@ -1798,14 +2111,14 @@ inline void vecOrthogonalBasis(ddVec3 & left, ddVec3 & up, ddVec3Param v)
 // ddMat4x4 helpers:
 // ========================================================
 
-inline void matTransformPointXYZ(ddVec3 & result, ddVec3Param p, ddMat4x4Param m)
+static inline void matTransformPointXYZ(ddVec3_Out result, ddVec3_In p, ddMat4x4_In m)
 {
     result[X] = (m[0] * p[X]) + (m[4] * p[Y]) + (m[8]  * p[Z]) + m[12]; // p[W] assumed to be 1
     result[Y] = (m[1] * p[X]) + (m[5] * p[Y]) + (m[9]  * p[Z]) + m[13];
     result[Z] = (m[2] * p[X]) + (m[6] * p[Y]) + (m[10] * p[Z]) + m[14];
 }
 
-inline void matTransformPointXYZW(float result[4], ddVec3Param p, ddMat4x4Param m)
+static inline void matTransformPointXYZW(float result[4], ddVec3_In p, ddMat4x4_In m)
 {
     result[X] = (m[0] * p[X]) + (m[4] * p[Y]) + (m[8]  * p[Z]) + m[12]; // p[W] assumed to be 1
     result[Y] = (m[1] * p[X]) + (m[5] * p[Y]) + (m[9]  * p[Z]) + m[13];
@@ -1813,7 +2126,7 @@ inline void matTransformPointXYZW(float result[4], ddVec3Param p, ddMat4x4Param 
     result[W] = (m[3] * p[X]) + (m[7] * p[Y]) + (m[11] * p[Z]) + m[15];
 }
 
-inline float matTransformPointXYZW2(ddVec3 & result, const float p[3], ddMat4x4Param m)
+static inline float matTransformPointXYZW2(ddVec3_Out result, const float p[3], ddMat4x4_In m)
 {
     result[X] = (m[0] * p[X]) + (m[4] * p[Y]) + (m[8]  * p[Z]) + m[12]; // p[W] assumed to be 1
     result[Y] = (m[1] * p[X]) + (m[5] * p[Y]) + (m[9]  * p[Z]) + m[13];
@@ -1833,9 +2146,9 @@ enum DrawMode
     DrawModeText
 };
 
-void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
+static void flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const DrawMode mode, const bool depthEnabled)
 {
-    if (g_vertexBufferUsed == 0)
+    if (DD_CONTEXT->vertexBufferUsed == 0)
     {
         return;
     }
@@ -1843,47 +2156,53 @@ void flushDebugVerts(const DrawMode mode, const bool depthEnabled)
     switch (mode)
     {
     case DrawModePoints :
-        g_renderInterface->drawPointList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
+        DD_CONTEXT->renderInterface->drawPointList(DD_CONTEXT->vertexBuffer,
+                                                   DD_CONTEXT->vertexBufferUsed,
+                                                   depthEnabled);
         break;
     case DrawModeLines :
-        g_renderInterface->drawLineList(g_vertexBuffer, g_vertexBufferUsed, depthEnabled);
+        DD_CONTEXT->renderInterface->drawLineList(DD_CONTEXT->vertexBuffer,
+                                                  DD_CONTEXT->vertexBufferUsed,
+                                                  depthEnabled);
         break;
     case DrawModeText :
-        g_renderInterface->drawGlyphList(g_vertexBuffer, g_vertexBufferUsed, g_glyphTex);
+        DD_CONTEXT->renderInterface->drawGlyphList(DD_CONTEXT->vertexBuffer,
+                                                   DD_CONTEXT->vertexBufferUsed,
+                                                   DD_CONTEXT->glyphTexHandle);
         break;
     } // switch (mode)
 
-    g_vertexBufferUsed = 0;
+    DD_CONTEXT->vertexBufferUsed = 0;
 }
 
-void pushPointVert(const DebugPoint & point)
+static void pushPointVert(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const DebugPoint & point)
 {
     // Make room for one more vert:
-    if ((g_vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((DD_CONTEXT->vertexBufferUsed + 1) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModePoints, point.depthEnabled);
+        flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModePoints, point.depthEnabled);
     }
 
-    DrawVertex & v = g_vertexBuffer[g_vertexBufferUsed++];
-    v.point.x    = point.position[X];
-    v.point.y    = point.position[Y];
-    v.point.z    = point.position[Z];
-    v.point.r    = point.color[X];
-    v.point.g    = point.color[Y];
-    v.point.b    = point.color[Z];
-    v.point.size = point.size;
+    DrawVertex & v = DD_CONTEXT->vertexBuffer[DD_CONTEXT->vertexBufferUsed++];
+    v.point.x      = point.position[X];
+    v.point.y      = point.position[Y];
+    v.point.z      = point.position[Z];
+    v.point.r      = point.color[X];
+    v.point.g      = point.color[Y];
+    v.point.b      = point.color[Z];
+    v.point.size   = point.size;
 }
 
-void pushLineVert(const DebugLine & line)
+static void pushLineVert(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const DebugLine & line)
 {
     // Make room for two more verts:
-    if ((g_vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((DD_CONTEXT->vertexBufferUsed + 2) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModeLines, line.depthEnabled);
+        flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModeLines, line.depthEnabled);
     }
 
-    DrawVertex & v0 = g_vertexBuffer[g_vertexBufferUsed++];
-    DrawVertex & v1 = g_vertexBuffer[g_vertexBufferUsed++];
+    DrawVertex & v0 = DD_CONTEXT->vertexBuffer[DD_CONTEXT->vertexBufferUsed++];
+    DrawVertex & v1 = DD_CONTEXT->vertexBuffer[DD_CONTEXT->vertexBufferUsed++];
 
     v0.line.x = line.posFrom[X];
     v0.line.y = line.posFrom[Y];
@@ -1900,23 +2219,24 @@ void pushLineVert(const DebugLine & line)
     v1.line.b = line.color[Z];
 }
 
-void pushGlyphVerts(const DrawVertex verts[4])
+static void pushGlyphVerts(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const DrawVertex verts[4])
 {
     static const int indexes[6] = { 0, 1, 2, 2, 1, 3 };
 
     // Make room for one more glyph (2 tris):
-    if ((g_vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
+    if ((DD_CONTEXT->vertexBufferUsed + 6) >= DEBUG_DRAW_VERTEX_BUFFER_SIZE)
     {
-        flushDebugVerts(DrawModeText, false);
+        flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModeText, false);
     }
 
     for (int i = 0; i < 6; ++i)
     {
-        g_vertexBuffer[g_vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
+        DD_CONTEXT->vertexBuffer[DD_CONTEXT->vertexBufferUsed++].glyph = verts[indexes[i]].glyph;
     }
 }
 
-void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, const float scaling)
+static void pushStringGlyphs(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) float x, float y,
+                             const char * text, ddVec3_In color, const float scaling)
 {
     // Invariants for all characters:
     const float initialX    = x;
@@ -1988,12 +2308,12 @@ void pushStringGlyphs(float x, float y, const char * text, ddVec3Param color, co
         verts[3].glyph.g = color[Y];
         verts[3].glyph.b = color[Z];
 
-        pushGlyphVerts(verts);
+        pushGlyphVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) verts);
         x += chrW;
     }
 }
 
-float calcTextWidth(const char * text, const float scaling)
+static float calcTextWidth(const char * text, const float scaling)
 {
     const float fixedWidth = static_cast<float>(getFontCharSet().charWidth);
     const float tabW = fixedWidth * 4.0f * scaling; // TAB = 4 spaces.
@@ -2016,114 +2336,124 @@ float calcTextWidth(const char * text, const float scaling)
     return x;
 }
 
-void drawDebugStrings()
+static void drawDebugStrings(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    if (g_debugStringsCount == 0)
+    const int count = DD_CONTEXT->debugStringsCount;
+    if (count == 0)
     {
         return;
     }
 
-    for (int i = 0; i < g_debugStringsCount; ++i)
+    const DebugString * const debugStrings = DD_CONTEXT->debugStrings;
+
+    for (int i = 0; i < count; ++i)
     {
-        const DebugString & dstr = g_debugStrings[i];
+        const DebugString & dstr = debugStrings[i];
         if (dstr.centered)
         {
             // 3D Labels are centered at the point of origin, e.g. center-aligned.
             const float offset = calcTextWidth(dstr.text.c_str(), dstr.scaling) * 0.5f;
-            pushStringGlyphs(dstr.posX - offset, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
+            pushStringGlyphs(DD_EXPLICIT_CONTEXT_ONLY(ctx,) dstr.posX - offset, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
         }
         else
         {
             // Left-aligned
-            pushStringGlyphs(dstr.posX, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
+            pushStringGlyphs(DD_EXPLICIT_CONTEXT_ONLY(ctx,) dstr.posX, dstr.posY, dstr.text.c_str(), dstr.color, dstr.scaling);
         }
     }
 
-    flushDebugVerts(DrawModeText, false);
+    flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModeText, false);
 }
 
-void drawDebugPoints()
+static void drawDebugPoints(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    if (g_debugPointsCount == 0)
+    const int count = DD_CONTEXT->debugPointsCount;
+    if (count == 0)
     {
         return;
     }
+
+    const DebugPoint * const debugPoints = DD_CONTEXT->debugPoints;
 
     //
     // First pass, points with depth test ENABLED:
     //
     int numDepthlessPoints = 0;
-    for (int i = 0; i < g_debugPointsCount; ++i)
+    for (int i = 0; i < count; ++i)
     {
-        const DebugPoint & point = g_debugPoints[i];
+        const DebugPoint & point = debugPoints[i];
         if (point.depthEnabled)
         {
-            pushPointVert(point);
+            pushPointVert(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point);
         }
         numDepthlessPoints += !point.depthEnabled;
     }
-    flushDebugVerts(DrawModePoints, true);
+    flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModePoints, true);
 
     //
     // Second pass draws points with depth DISABLED:
     //
     if (numDepthlessPoints > 0)
     {
-        for (int i = 0; i < g_debugPointsCount; ++i)
+        for (int i = 0; i < count; ++i)
         {
-            const DebugPoint & point = g_debugPoints[i];
+            const DebugPoint & point = debugPoints[i];
             if (!point.depthEnabled)
             {
-                pushPointVert(point);
+                pushPointVert(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point);
             }
         }
-        flushDebugVerts(DrawModePoints, false);
+        flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModePoints, false);
     }
 }
 
-void drawDebugLines()
+static void drawDebugLines(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    if (g_debugLinesCount == 0)
+    const int count = DD_CONTEXT->debugLinesCount;
+    if (count == 0)
     {
         return;
     }
+
+    const DebugLine * const debugLines = DD_CONTEXT->debugLines;
 
     //
     // First pass, lines with depth test ENABLED:
     //
     int numDepthlessLines = 0;
-    for (int i = 0; i < g_debugLinesCount; ++i)
+    for (int i = 0; i < count; ++i)
     {
-        const DebugLine & line = g_debugLines[i];
+        const DebugLine & line = debugLines[i];
         if (line.depthEnabled)
         {
-            pushLineVert(line);
+            pushLineVert(DD_EXPLICIT_CONTEXT_ONLY(ctx,) line);
         }
         numDepthlessLines += !line.depthEnabled;
     }
-    flushDebugVerts(DrawModeLines, true);
+    flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModeLines, true);
 
     //
     // Second pass draws lines with depth DISABLED:
     //
     if (numDepthlessLines > 0)
     {
-        for (int i = 0; i < g_debugLinesCount; ++i)
+        for (int i = 0; i < count; ++i)
         {
-            const DebugLine & line = g_debugLines[i];
+            const DebugLine & line = debugLines[i];
             if (!line.depthEnabled)
             {
-                pushLineVert(line);
+                pushLineVert(DD_EXPLICIT_CONTEXT_ONLY(ctx,) line);
             }
         }
-        flushDebugVerts(DrawModeLines, false);
+        flushDebugVerts(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DrawModeLines, false);
     }
 }
 
 template<typename T>
-void clearDebugQueue(T * queue, int & queueCount)
+static void clearDebugQueue(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) T * queue, int & queueCount)
 {
-    if (g_currentTimeMillis == 0)
+    const std::int64_t time = DD_CONTEXT->currentTimeMillis;
+    if (time == 0)
     {
         queueCount = 0;
         return;
@@ -2135,7 +2465,7 @@ void clearDebugQueue(T * queue, int & queueCount)
     // Concatenate elements that still need to be draw on future frames:
     for (int i = 0; i < queueCount; ++i, ++pElem)
     {
-        if (pElem->expiryDateMillis > g_currentTimeMillis)
+        if (pElem->expiryDateMillis > time)
         {
             if (index != i)
             {
@@ -2148,149 +2478,176 @@ void clearDebugQueue(T * queue, int & queueCount)
     queueCount = index;
 }
 
-void setupGlyphTexture()
+static void setupGlyphTexture(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    if (g_renderInterface == DD_NULL)
+    if (DD_CONTEXT->renderInterface == nullptr)
     {
         return;
     }
 
-    if (g_glyphTex != DD_NULL)
+    if (DD_CONTEXT->glyphTexHandle != nullptr)
     {
-        g_renderInterface->destroyGlyphTexture(g_glyphTex);
-        g_glyphTex = DD_NULL;
+        DD_CONTEXT->renderInterface->destroyGlyphTexture(DD_CONTEXT->glyphTexHandle);
+        DD_CONTEXT->glyphTexHandle = nullptr;
     }
 
-    UByte * decompressedBitmap = decompressFontBitmap();
-    if (decompressedBitmap == DD_NULL)
+    std::uint8_t * decompressedBitmap = decompressFontBitmap();
+    if (decompressedBitmap == nullptr)
     {
         return; // Failed to decompressed. No font rendering available.
     }
 
-    g_glyphTex = g_renderInterface->createGlyphTexture(
-                         getFontCharSet().bitmapWidth,
-                         getFontCharSet().bitmapHeight,
-                         decompressedBitmap);
+    DD_CONTEXT->glyphTexHandle = DD_CONTEXT->renderInterface->createGlyphTexture(
+                                        getFontCharSet().bitmapWidth,
+                                        getFontCharSet().bitmapHeight,
+                                        decompressedBitmap);
 
     // No longer needed.
     DD_MFREE(decompressedBitmap);
 }
 
-} // namespace unnamed {}
-
 // ========================================================
 // Public Debug Draw interface:
 // ========================================================
 
-void initialize(RenderInterface * renderer)
+bool initialize(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle * outCtx,) RenderInterface * renderer)
 {
-    if (g_renderInterface != DD_NULL) // Reinitializing?
+    if (renderer == nullptr)
     {
-        shutdown(); // Shutdown first.
+        return false;
     }
 
-    g_renderInterface = renderer;
-    g_currentTimeMillis = 0;
-    g_vertexBufferUsed  = 0;
-    g_debugStringsCount = 0;
-    g_debugPointsCount  = 0;
-    g_debugLinesCount   = 0;
-
-    setupGlyphTexture();
-}
-
-void shutdown()
-{
-    //
-    // If this macro is defined, the user-provided ddStr type
-    // needs some extra cleanup before shutdown, so we run for
-    // all entries in the g_debugStrings[] array.
-    //
-    // We could call std::string::clear() here, but clear()
-    // doesn't deallocate memory in std string, so we might
-    // as well let the default destructor do the cleanup,
-    // when using the default (AKA std::string) ddStr.
-    //
-    #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
+    void * buffer = DD_MALLOC(sizeof(InternalContext));
+    if (buffer == nullptr)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
-    }
-    #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
-
-    if (g_renderInterface != DD_NULL && g_glyphTex != DD_NULL)
-    {
-        g_renderInterface->destroyGlyphTexture(g_glyphTex);
-        g_glyphTex = DD_NULL;
+        return false;
     }
 
-    g_renderInterface = DD_NULL;
+    InternalContext * newCtx = ::new(buffer) InternalContext(renderer);
+
+    #ifdef DEBUG_DRAW_EXPLICIT_CONTEXT
+    if ((*outCtx) != nullptr) { shutdown(*outCtx); }
+    (*outCtx) = newCtx;
+    #else // !DEBUG_DRAW_EXPLICIT_CONTEXT
+    if (DD_CONTEXT != nullptr) { shutdown(); }
+    DD_CONTEXT = newCtx;
+    #endif // DEBUG_DRAW_EXPLICIT_CONTEXT
+
+    setupGlyphTexture(DD_EXPLICIT_CONTEXT_ONLY(*outCtx));
+    return true;
 }
 
-bool hasPendingDraws()
+void shutdown(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    return (g_debugStringsCount + g_debugPointsCount + g_debugLinesCount) > 0;
+    if (DD_CONTEXT != nullptr)
+    {
+        // If this macro is defined, the user-provided ddStr type
+        // needs some extra cleanup before shutdown, so we run for
+        // all entries in the debugStrings[] array.
+        //
+        // We could call std::string::clear() here, but clear()
+        // doesn't deallocate memory in std string, so we might
+        // as well let the default destructor do the cleanup,
+        // when using the default (AKA std::string) ddStr.
+        #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
+        for (int i = 0; i < DEBUG_DRAW_MAX_STRINGS; ++i)
+        {
+            DEBUG_DRAW_STR_DEALLOC_FUNC(DD_CONTEXT->debugStrings[i].text);
+        }
+        #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
+
+        if (DD_CONTEXT->renderInterface != nullptr && DD_CONTEXT->glyphTexHandle != nullptr)
+        {
+            DD_CONTEXT->renderInterface->destroyGlyphTexture(DD_CONTEXT->glyphTexHandle);
+        }
+
+        DD_CONTEXT->~InternalContext(); // Destroy first
+        DD_MFREE(DD_CONTEXT);
+
+        #ifndef DEBUG_DRAW_EXPLICIT_CONTEXT
+        DD_CONTEXT = nullptr;
+        #endif // DEBUG_DRAW_EXPLICIT_CONTEXT
+    }
 }
 
-void flush(const ddI64 currTimeMillis, const int flags)
+bool isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    DD_CHECK_INIT;
+    return (DD_CONTEXT != nullptr && DD_CONTEXT->renderInterface != nullptr);
+}
 
-    if (!hasPendingDraws())
+bool hasPendingDraws(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
+{
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return false;
+    }
+    return (DD_CONTEXT->debugStringsCount + DD_CONTEXT->debugPointsCount + DD_CONTEXT->debugLinesCount) > 0;
+}
+
+void flush(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const std::int64_t currTimeMillis, const std::uint32_t flags)
+{
+    if (!hasPendingDraws(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
     {
         return;
     }
 
     // Save the last know time value for next dd::line/dd::point calls.
-    g_currentTimeMillis = currTimeMillis;
+    DD_CONTEXT->currentTimeMillis = currTimeMillis;
 
-    // Let the user set common render states...
-    g_renderInterface->beginDraw();
+    // Let the user set common render states.
+    DD_CONTEXT->renderInterface->beginDraw();
 
     // Issue the render calls:
-    if (flags & FlushLines)  { drawDebugLines();   }
-    if (flags & FlushPoints) { drawDebugPoints();  }
-    if (flags & FlushText)   { drawDebugStrings(); }
+    if (flags & FlushLines)  { drawDebugLines(DD_EXPLICIT_CONTEXT_ONLY(ctx));   }
+    if (flags & FlushPoints) { drawDebugPoints(DD_EXPLICIT_CONTEXT_ONLY(ctx));  }
+    if (flags & FlushText)   { drawDebugStrings(DD_EXPLICIT_CONTEXT_ONLY(ctx)); }
 
-    // And cleanup if needed...
-    g_renderInterface->endDraw();
+    // And cleanup if needed.
+    DD_CONTEXT->renderInterface->endDraw();
 
     // Remove all expired objects, regardless of draw flags:
-    clearDebugQueue(g_debugStrings, g_debugStringsCount);
-    clearDebugQueue(g_debugPoints,  g_debugPointsCount);
-    clearDebugQueue(g_debugLines,   g_debugLinesCount);
+    clearDebugQueue(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DD_CONTEXT->debugStrings, DD_CONTEXT->debugStringsCount);
+    clearDebugQueue(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DD_CONTEXT->debugPoints,  DD_CONTEXT->debugPointsCount);
+    clearDebugQueue(DD_EXPLICIT_CONTEXT_ONLY(ctx,) DD_CONTEXT->debugLines,   DD_CONTEXT->debugLinesCount);
 }
 
-void clear()
+void clear(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx))
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     // Let the user cleanup the debug strings:
     #ifdef DEBUG_DRAW_STR_DEALLOC_FUNC
-    for (int i = 0; i < DD_ARRAY_LEN(g_debugStrings); ++i)
+    for (int i = 0; i < DEBUG_DRAW_MAX_STRINGS; ++i)
     {
-        DEBUG_DRAW_STR_DEALLOC_FUNC(g_debugStrings[i].text);
+        DEBUG_DRAW_STR_DEALLOC_FUNC(DD_CONTEXT->debugStrings[i].text);
     }
     #endif // DEBUG_DRAW_STR_DEALLOC_FUNC
 
-    g_vertexBufferUsed  = 0;
-    g_debugStringsCount = 0;
-    g_debugPointsCount  = 0;
-    g_debugLinesCount   = 0;
+    DD_CONTEXT->vertexBufferUsed  = 0;
+    DD_CONTEXT->debugStringsCount = 0;
+    DD_CONTEXT->debugPointsCount  = 0;
+    DD_CONTEXT->debugLinesCount   = 0;
 }
 
-void point(ddVec3Param pos, ddVec3Param color, const float size, const int durationMillis, const bool depthEnabled)
+void point(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In pos, ddVec3_In color,
+           const float size, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
-    if (g_debugPointsCount == DEBUG_DRAW_MAX_POINTS)
+    if (DD_CONTEXT->debugPointsCount == DEBUG_DRAW_MAX_POINTS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_POINTS limit reached! Dropping further debug point draws.");
         return;
     }
 
-    DebugPoint & point     = g_debugPoints[g_debugPointsCount++];
-    point.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugPoint & point     = DD_CONTEXT->debugPoints[DD_CONTEXT->debugPointsCount++];
+    point.expiryDateMillis = DD_CONTEXT->currentTimeMillis + durationMillis;
     point.depthEnabled     = depthEnabled;
     point.size             = size;
 
@@ -2298,18 +2655,22 @@ void point(ddVec3Param pos, ddVec3Param color, const float size, const int durat
     vecCopy(point.color, color);
 }
 
-void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void line(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In from, ddVec3_In to,
+          ddVec3_In color, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
-    if (g_debugLinesCount == DEBUG_DRAW_MAX_LINES)
+    if (DD_CONTEXT->debugLinesCount == DEBUG_DRAW_MAX_LINES)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_LINES limit reached! Dropping further debug line draws.");
         return;
     }
 
-    DebugLine & line      = g_debugLines[g_debugLinesCount++];
-    line.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugLine & line      = DD_CONTEXT->debugLines[DD_CONTEXT->debugLinesCount++];
+    line.expiryDateMillis = DD_CONTEXT->currentTimeMillis + durationMillis;
     line.depthEnabled     = depthEnabled;
 
     vecCopy(line.posFrom, from);
@@ -2317,41 +2678,50 @@ void line(ddVec3Param from, ddVec3Param to, ddVec3Param color, const int duratio
     vecCopy(line.color, color);
 }
 
-void screenText(ddStrParam str, ddVec3Param pos, ddVec3Param color, const float scaling, const int durationMillis)
+void screenText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const char * const str, ddVec3_In pos,
+                ddVec3_In color, const float scaling, const int durationMillis)
 {
-    DD_CHECK_INIT;
-    if (g_glyphTex == DD_NULL)
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
     {
         return;
     }
 
-    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (DD_CONTEXT->glyphTexHandle == nullptr)
+    {
+        return;
+    }
+
+    if (DD_CONTEXT->debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
     }
 
-    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
-    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugString & dstr    = DD_CONTEXT->debugStrings[DD_CONTEXT->debugStringsCount++];
+    dstr.expiryDateMillis = DD_CONTEXT->currentTimeMillis + durationMillis;
     dstr.posX             = pos[X];
     dstr.posY             = pos[Y];
     dstr.scaling          = scaling;
-    dstr.text             = DD_MOVE(str);
+    dstr.text             = str;
     dstr.centered         = false;
     vecCopy(dstr.color, color);
 }
 
-void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4Param vpMatrix,
-                   const int sx, const int sy, const int sw, const int sh, const float scaling,
+void projectedText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const char * const str, ddVec3_In pos, ddVec3_In color,
+                   ddMat4x4_In vpMatrix, const int sx, const int sy, const int sw, const int sh, const float scaling,
                    const int durationMillis)
 {
-    DD_CHECK_INIT;
-    if (g_glyphTex == DD_NULL)
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
     {
         return;
     }
 
-    if (g_debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
+    if (DD_CONTEXT->glyphTexHandle == nullptr)
+    {
+        return;
+    }
+
+    if (DD_CONTEXT->debugStringsCount == DEBUG_DRAW_MAX_STRINGS)
     {
         DEBUG_DRAW_OVERFLOWED("DEBUG_DRAW_MAX_STRINGS limit reached! Dropping further debug string draws.");
         return;
@@ -2361,7 +2731,7 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
     matTransformPointXYZW(tempPoint, pos, vpMatrix);
 
     // Bail if W ended up as zero.
-    if (DD_FABS(tempPoint[W]) < DD_EPSILON)
+    if (floatAbs(tempPoint[W]) < FloatEpsilon)
     {
         return;
     }
@@ -2378,20 +2748,23 @@ void projectedText(ddStrParam str, ddVec3Param pos, ddVec3Param color, ddMat4x4P
     // NOTE: This is not renderer agnostic, I think... Should add a #define or something!
     scrY = static_cast<float>(sh) - scrY;
 
-    DebugString & dstr    = g_debugStrings[g_debugStringsCount++];
-    dstr.expiryDateMillis = g_currentTimeMillis + durationMillis;
+    DebugString & dstr    = DD_CONTEXT->debugStrings[DD_CONTEXT->debugStringsCount++];
+    dstr.expiryDateMillis = DD_CONTEXT->currentTimeMillis + durationMillis;
     dstr.posX             = scrX;
     dstr.posY             = scrY;
     dstr.scaling          = scaling;
-    dstr.text             = DD_MOVE(str);
+    dstr.text             = str;
     dstr.centered         = true;
     vecCopy(dstr.color, color);
 }
 
-void axisTriad(ddMat4x4Param transform, const float size, const float length,
-               const int durationMillis, const bool depthEnabled)
+void axisTriad(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddMat4x4_In transform, const float size,
+               const float length, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 p0, p1, p2, p3;
     ddVec3 xEnd, yEnd, zEnd;
@@ -2411,39 +2784,35 @@ void axisTriad(ddMat4x4Param transform, const float size, const float length,
     matTransformPointXYZ(p2, yEnd, transform);
     matTransformPointXYZ(p3, zEnd, transform);
 
-    arrow(p0, p1, cR, size, durationMillis, depthEnabled); // X: red axis
-    arrow(p0, p2, cG, size, durationMillis, depthEnabled); // Y: green axis
-    arrow(p0, p3, cB, size, durationMillis, depthEnabled); // Z: blue axis
+    arrow(DD_EXPLICIT_CONTEXT_ONLY(ctx,) p0, p1, cR, size, durationMillis, depthEnabled); // X: red axis
+    arrow(DD_EXPLICIT_CONTEXT_ONLY(ctx,) p0, p2, cG, size, durationMillis, depthEnabled); // Y: green axis
+    arrow(DD_EXPLICIT_CONTEXT_ONLY(ctx,) p0, p3, cB, size, durationMillis, depthEnabled); // Z: blue axis
 }
 
-void arrow(ddVec3Param from, ddVec3Param to, ddVec3Param color, const float size,
-           const int durationMillis, const bool depthEnabled)
+void arrow(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In from, ddVec3_In to, ddVec3_In color,
+           const float size, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
-
-    static const float arrowStep = 30.0f; // In degrees
-    static bool sinCosTablesComputed = false;
-    static float arrowSin[45];
-    static float arrowCos[45];
-
-    // Calculate sine and cosine tables only once:
-    if (!sinCosTablesComputed)
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
     {
-        int i = 0;
-        float degrees = 0.0f;
-        for (; degrees < 360.0f; degrees += arrowStep, ++i)
-        {
-            arrowSin[i] = DD_FSIN(DD_DEG2RAD(degrees));
-            arrowCos[i] = DD_FCOS(DD_DEG2RAD(degrees));
-        }
-
-        arrowSin[i] = arrowSin[0];
-        arrowCos[i] = arrowCos[0];
-        sinCosTablesComputed = true;
+        return;
     }
 
+    static const float arrowStep = 30.0f; // In degrees
+    static const float arrowSin[45] = {
+        0.0f, 0.5f, 0.866025f, 1.0f, 0.866025f, 0.5f, -0.0f, -0.5f, -0.866025f,
+        -1.0f, -0.866025f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+    };
+    static const float arrowCos[45] = {
+        1.0f, 0.866025f, 0.5f, -0.0f, -0.5f, -0.866026f, -1.0f, -0.866025f, -0.5f, 0.0f,
+        0.5f, 0.866026f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
+    };
+
     // Body line:
-    line(from, to, color, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, color, durationMillis, depthEnabled);
 
     // Aux vectors to compute the arrowhead:
     ddVec3 up, right, forward;
@@ -2477,14 +2846,18 @@ void arrow(ddVec3Param from, ddVec3Param to, ddVec3Param color, const float size
         vecScale(temp, up, scale);
         vecAdd(v2, v2, temp);
 
-        line(v1, to, color, durationMillis, depthEnabled);
-        line(v1, v2, color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v1, to, color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v1, v2, color, durationMillis, depthEnabled);
     }
 }
 
-void cross(ddVec3Param center, const float length, const int durationMillis, const bool depthEnabled)
+void cross(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, const float length,
+           const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 from, to;
     ddVec3 cR, cG, cB;
@@ -2501,23 +2874,26 @@ void cross(ddVec3Param center, const float length, const int durationMillis, con
     // Red line: X - length/2 to X + length/2
     vecSet(from, cx - hl, cy, cz);
     vecSet(to,   cx + hl, cy, cz);
-    line(from, to, cR, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, cR, durationMillis, depthEnabled);
 
     // Green line: Y - length/2 to Y + length/2
     vecSet(from, cx, cy - hl, cz);
     vecSet(to,   cx, cy + hl, cz);
-    line(from, to, cG, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, cG, durationMillis, depthEnabled);
 
     // Blue line: Z - length/2 to Z + length/2
     vecSet(from, cx, cy, cz - hl);
     vecSet(to,   cx, cy, cz + hl);
-    line(from, to, cB, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, cB, durationMillis, depthEnabled);
 }
 
-void circle(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param color, const float radius,
-            const float numSteps, const int durationMillis, const bool depthEnabled)
+void circle(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, ddVec3_In planeNormal, ddVec3_In color,
+            const float radius, const float numSteps, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 left, up;
     ddVec3 point, lastPoint;
@@ -2530,24 +2906,28 @@ void circle(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param color, cons
 
     for (int i = 1; i <= numSteps; ++i)
     {
-        const float radians = DD_TAU * i / numSteps;
+        const float radians = TAU * i / numSteps;
 
         ddVec3 vs, vc;
-        vecScale(vs, left, DD_FSIN(radians));
-        vecScale(vc, up,   DD_FCOS(radians));
+        vecScale(vs, left, floatSin(radians));
+        vecScale(vc, up,   floatCos(radians));
 
         vecAdd(point, center, vs);
         vecAdd(point, point,  vc);
 
-        line(lastPoint, point, color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastPoint, point, color, durationMillis, depthEnabled);
         vecCopy(lastPoint, point);
     }
 }
 
-void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, ddVec3Param normalVecColor,
-           const float planeScale, const float normalVecScale, const int durationMillis, const bool depthEnabled)
+void plane(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, ddVec3_In planeNormal, ddVec3_In planeColor,
+           ddVec3_In normalVecColor, const float planeScale, const float normalVecScale, const int durationMillis,
+           const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 v1, v2, v3, v4;
     ddVec3 tangent, bitangent;
@@ -2565,10 +2945,10 @@ void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, 
     #undef DD_PLANE_V
 
     // Draw the wireframe plane quadrilateral:
-    line(v1, v2, planeColor, durationMillis, depthEnabled);
-    line(v2, v3, planeColor, durationMillis, depthEnabled);
-    line(v3, v4, planeColor, durationMillis, depthEnabled);
-    line(v4, v1, planeColor, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v1, v2, planeColor, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v2, v3, planeColor, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v3, v4, planeColor, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) v4, v1, planeColor, durationMillis, depthEnabled);
 
     // Optionally add a line depicting the plane normal:
     if (normalVecScale != 0.0f)
@@ -2577,13 +2957,17 @@ void plane(ddVec3Param center, ddVec3Param planeNormal, ddVec3Param planeColor, 
         normalVec[X] = (planeNormal[X] * normalVecScale) + center[X];
         normalVec[Y] = (planeNormal[Y] * normalVecScale) + center[Y];
         normalVec[Z] = (planeNormal[Z] * normalVecScale) + center[Z];
-        line(center, normalVec, normalVecColor, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) center, normalVec, normalVecColor, durationMillis, depthEnabled);
     }
 }
 
-void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int durationMillis, const bool depthEnabled)
+void sphere(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, ddVec3_In color,
+            const float radius, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     static const int stepSize = 15;
     ddVec3 cache[360 / stepSize];
@@ -2592,7 +2976,7 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
     vecSet(radiusVec, 0.0f, 0.0f, radius);
     vecAdd(cache[0], center, radiusVec);
 
-    for (int n = 1; n < DD_ARRAY_LEN(cache); ++n)
+    for (int n = 1; n < arrayLength(cache); ++n)
     {
         vecCopy(cache[n], cache[0]);
     }
@@ -2600,8 +2984,8 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
     ddVec3 lastPoint, temp;
     for (int i = stepSize; i <= 360; i += stepSize)
     {
-        const float s = DD_FSIN(DD_DEG2RAD(i));
-        const float c = DD_FCOS(DD_DEG2RAD(i));
+        const float s = floatSin(degreesToRadians(i));
+        const float c = floatCos(degreesToRadians(i));
 
         lastPoint[X] = center[X];
         lastPoint[Y] = center[Y] + radius * s;
@@ -2609,12 +2993,12 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
 
         for (int n = 0, j = stepSize; j <= 360; j += stepSize, ++n)
         {
-            temp[X] = center[X] + DD_FSIN(DD_DEG2RAD(j)) * radius * s;
-            temp[Y] = center[Y] + DD_FCOS(DD_DEG2RAD(j)) * radius * s;
+            temp[X] = center[X] + floatSin(degreesToRadians(j)) * radius * s;
+            temp[Y] = center[Y] + floatCos(degreesToRadians(j)) * radius * s;
             temp[Z] = lastPoint[Z];
 
-            line(lastPoint, temp, color, durationMillis, depthEnabled);
-            line(lastPoint, cache[n], color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastPoint, temp, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastPoint, cache[n], color, durationMillis, depthEnabled);
 
             vecCopy(cache[n], lastPoint);
             vecCopy(lastPoint, temp);
@@ -2622,10 +3006,13 @@ void sphere(ddVec3Param center, ddVec3Param color, const float radius, const int
     }
 }
 
-void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float baseRadius,
-          const float apexRadius, const int durationMillis, const bool depthEnabled)
+void cone(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In apex, ddVec3_In dir, ddVec3_In color,
+          const float baseRadius, const float apexRadius, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     static const int stepSize = 20;
     ddVec3 axis[3];
@@ -2648,15 +3035,15 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
     {
         for (int i = stepSize; i <= 360; i += stepSize)
         {
-            vecScale(temp1, axis[0], DD_FSIN(DD_DEG2RAD(i)));
-            vecScale(temp2, axis[1], DD_FCOS(DD_DEG2RAD(i)));
+            vecScale(temp1, axis[0], floatSin(degreesToRadians(i)));
+            vecScale(temp2, axis[1], floatCos(degreesToRadians(i)));
             vecAdd(temp0, temp1, temp2);
 
             vecScale(temp0, temp0, baseRadius);
             vecAdd(p2, top, temp0);
 
-            line(lastP2, p2, color, durationMillis, depthEnabled);
-            line(p2, apex, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastP2, p2, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) p2, apex, color, durationMillis, depthEnabled);
 
             vecCopy(lastP2, p2);
         }
@@ -2668,8 +3055,8 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
 
         for (int i = stepSize; i <= 360; i += stepSize)
         {
-            vecScale(temp1, axis[0], DD_FSIN(DD_DEG2RAD(i)));
-            vecScale(temp2, axis[1], DD_FCOS(DD_DEG2RAD(i)));
+            vecScale(temp1, axis[0], floatSin(degreesToRadians(i)));
+            vecScale(temp2, axis[1], floatCos(degreesToRadians(i)));
             vecAdd(temp0, temp1, temp2);
 
             vecScale(temp1, temp0, apexRadius);
@@ -2678,9 +3065,9 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
             vecAdd(p1, apex, temp1);
             vecAdd(p2, top,  temp2);
 
-            line(lastP1, p1, color, durationMillis, depthEnabled);
-            line(lastP2, p2, color, durationMillis, depthEnabled);
-            line(p1, p2, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastP1, p1, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) lastP2, p2, color, durationMillis, depthEnabled);
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) p1, p2, color, durationMillis, depthEnabled);
 
             vecCopy(lastP1, p1);
             vecCopy(lastP2, p2);
@@ -2688,22 +3075,26 @@ void cone(ddVec3Param apex, ddVec3Param dir, ddVec3Param color, const float base
     }
 }
 
-void box(const ddVec3 points[8], ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void box(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const ddVec3 points[8], ddVec3_In color,
+         const int durationMillis, const bool depthEnabled)
 {
     // Build the lines from points using clever indexing tricks:
     // (& 3 is a fancy way of doing % 4, but avoids the expensive modulo operation)
     for (int i = 0; i < 4; ++i)
     {
-        line(points[i], points[(i + 1) & 3], color, durationMillis, depthEnabled);
-        line(points[4 + i], points[4 + ((i + 1) & 3)], color, durationMillis, depthEnabled);
-        line(points[i], points[4 + i], color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points[i], points[(i + 1) & 3], color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points[4 + i], points[4 + ((i + 1) & 3)], color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points[i], points[4 + i], color, durationMillis, depthEnabled);
     }
 }
 
-void box(ddVec3Param center, ddVec3Param color, const float width, const float height,
-         const float depth, const int durationMillis, const bool depthEnabled)
+void box(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, ddVec3_In color, const float width,
+         const float height, const float depth, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     const float cx = center[X];
     const float cy = center[Y];
@@ -2728,12 +3119,16 @@ void box(ddVec3Param center, ddVec3Param color, const float width, const float h
     DD_BOX_V(points[7], +, -, +);
     #undef DD_BOX_V
 
-    box(points, color, durationMillis, depthEnabled);
+    box(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points, color, durationMillis, depthEnabled);
 }
 
-void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void aabb(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In mins, ddVec3_In maxs,
+          ddVec3_In color, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 bb[2];
     ddVec3 points[8];
@@ -2742,7 +3137,7 @@ void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durat
     vecCopy(bb[1], maxs);
 
     // Expand min/max bounds:
-    for (int i = 0; i < DD_ARRAY_LEN(points); ++i)
+    for (int i = 0; i < arrayLength(points); ++i)
     {
         points[i][X] = bb[(i ^ (i >> 1)) & 1][X];
         points[i][Y] = bb[(i >> 1) & 1][Y];
@@ -2750,12 +3145,16 @@ void aabb(ddVec3Param mins, ddVec3Param maxs, ddVec3Param color, const int durat
     }
 
     // Build the lines:
-    box(points, color, durationMillis, depthEnabled);
+    box(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points, color, durationMillis, depthEnabled);
 }
 
-void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void frustum(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddMat4x4_In invClipMatrix,
+             ddVec3_In color, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     // Start with the standard clip volume, then bring it back to world space.
     static const float planes[8][3] = {
@@ -2771,16 +3170,16 @@ void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationM
     float wCoords[8];
 
     // Transform the planes by the inverse clip matrix:
-    for (int i = 0; i < DD_ARRAY_LEN(planes); ++i)
+    for (int i = 0; i < arrayLength(planes); ++i)
     {
         wCoords[i] = matTransformPointXYZW2(points[i], planes[i], invClipMatrix);
     }
 
     // Divide by the W component of each:
-    for (int i = 0; i < DD_ARRAY_LEN(planes); ++i)
+    for (int i = 0; i < arrayLength(planes); ++i)
     {
         // But bail if any W ended up as zero.
-        if (DD_FABS(wCoords[W]) < DD_EPSILON)
+        if (floatAbs(wCoords[W]) < FloatEpsilon)
         {
             return;
         }
@@ -2791,13 +3190,16 @@ void frustum(ddMat4x4Param invClipMatrix, ddVec3Param color, const int durationM
     }
 
     // Connect the dots:
-    box(points, color, durationMillis, depthEnabled);
+    box(DD_EXPLICIT_CONTEXT_ONLY(ctx,) points, color, durationMillis, depthEnabled);
 }
 
-void vertexNormal(ddVec3Param origin, ddVec3Param normal, const float length,
-                  const int durationMillis, const bool depthEnabled)
+void vertexNormal(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In origin, ddVec3_In normal,
+                  const float length, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 normalVec;
     ddVec3 normalColor;
@@ -2808,13 +3210,16 @@ void vertexNormal(ddVec3Param origin, ddVec3Param normal, const float length,
     normalVec[Y] = (normal[Y] * length) + origin[Y];
     normalVec[Z] = (normal[Z] * length) + origin[Z];
 
-    line(origin, normalVec, normalColor, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) origin, normalVec, normalColor, durationMillis, depthEnabled);
 }
 
-void tangentBasis(ddVec3Param origin, ddVec3Param normal, ddVec3Param tangent, ddVec3Param bitangent,
-                  const float lengths, const int durationMillis, const bool depthEnabled)
+void tangentBasis(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In origin, ddVec3_In normal, ddVec3_In tangent,
+                  ddVec3_In bitangent, const float lengths, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 cN, cT, cB;
     ddVec3 vN, vT, vB;
@@ -2835,15 +3240,18 @@ void tangentBasis(ddVec3Param origin, ddVec3Param normal, ddVec3Param tangent, d
     vB[Y] = (bitangent[Y] * lengths) + origin[Y];
     vB[Z] = (bitangent[Z] * lengths) + origin[Z];
 
-    line(origin, vN, cN, durationMillis, depthEnabled);
-    line(origin, vT, cT, durationMillis, depthEnabled);
-    line(origin, vB, cB, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) origin, vN, cN, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) origin, vT, cT, durationMillis, depthEnabled);
+    line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) origin, vB, cB, durationMillis, depthEnabled);
 }
 
-void xzSquareGrid(const float mins, const float maxs, const float y, const float step,
-                  ddVec3Param color, const int durationMillis, const bool depthEnabled)
+void xzSquareGrid(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const float mins, const float maxs, const float y,
+                  const float step, ddVec3_In color, const int durationMillis, const bool depthEnabled)
 {
-    DD_CHECK_INIT;
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
 
     ddVec3 from, to;
     for (float i = mins; i <= maxs; i += step)
@@ -2851,12 +3259,12 @@ void xzSquareGrid(const float mins, const float maxs, const float y, const float
         // Horizontal line (along the X)
         vecSet(from, mins, y, i);
         vecSet(to,   maxs, y, i);
-        line(from, to, color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, color, durationMillis, depthEnabled);
 
         // Vertical line (along the Z)
         vecSet(from, i, y, mins);
         vecSet(to,   i, y, maxs);
-        line(from, to, color, durationMillis, depthEnabled);
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, color, durationMillis, depthEnabled);
     }
 }
 
@@ -2864,38 +3272,22 @@ void xzSquareGrid(const float mins, const float maxs, const float y, const float
 // RenderInterface stubs:
 // ========================================================
 
-RenderInterface::~RenderInterface() { }
-void RenderInterface::beginDraw() { }
-void RenderInterface::endDraw() { }
-void RenderInterface::drawPointList(const DrawVertex *, int, bool) { }
-void RenderInterface::drawLineList(const DrawVertex *, int, bool) { }
+RenderInterface::~RenderInterface()                                              { }
+void RenderInterface::beginDraw()                                                { }
+void RenderInterface::endDraw()                                                  { }
+void RenderInterface::drawPointList(const DrawVertex *, int, bool)               { }
+void RenderInterface::drawLineList(const DrawVertex *, int, bool)                { }
 void RenderInterface::drawGlyphList(const DrawVertex *, int, GlyphTextureHandle) { }
-void RenderInterface::destroyGlyphTexture(GlyphTextureHandle) { }
-GlyphTextureHandle RenderInterface::createGlyphTexture(int, int, const void *) { return DD_NULL; }
+void RenderInterface::destroyGlyphTexture(GlyphTextureHandle)                    { }
+GlyphTextureHandle RenderInterface::createGlyphTexture(int, int, const void *)   { return nullptr; }
 
-} // namespace dd {}
+} // namespace dd
 
-// Cleanup the local macros:
-#undef DD_NULL
-#undef DD_MOVE
-#undef DD_FSIN
-#undef DD_FCOS
-#undef DD_FABS
-#undef DD_INV_FSQRT
-#undef DD_PI
-#undef DD_TAU
-#undef DD_EPSILON
-#undef DD_DEG2RAD
-#undef DD_ARRAY_LEN
-#undef DD_CHECK_INIT
+#undef DD_CONTEXT
 #undef DD_MALLOC
 #undef DD_MFREE
-
-// Restore the warnings we have selectively silenced in the implementation:
-#ifdef __clang__
-    #pragma clang diagnostic pop
-#endif // __clang__
 
 // ================ End of implementation =================
 #endif // DEBUG_DRAW_IMPLEMENTATION
 // ================ End of implementation =================
+

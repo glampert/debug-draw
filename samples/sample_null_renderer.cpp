@@ -1,10 +1,9 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File: sample_null_renderer.cpp
+// File:   sample_null_renderer.cpp
 // Author: Guilherme R. Lampert
-// Created on: 17/12/15
-// Brief: Minimal Debug Draw usage sample that does nothing (a null renderer).
+// Brief:  Minimal Debug Draw usage sample that does nothing (a null renderer).
 //
 // This software is in the public domain. Where that dedication is not recognized,
 // you are granted a perpetual, irrevocable license to copy, distribute, and modify
@@ -14,7 +13,7 @@
 #define DEBUG_DRAW_IMPLEMENTATION
 #include "debug_draw.hpp"
 
-class DDRenderInterfaceNull
+class DDRenderInterfaceNull final
     : public dd::RenderInterface
 {
 public:
@@ -27,7 +26,8 @@ int main()
 
     dd::initialize(&ddRenderIfaceNull);
 
-    dd::flush(0);
+    dd::flush();
 
     dd::shutdown();
 }
+

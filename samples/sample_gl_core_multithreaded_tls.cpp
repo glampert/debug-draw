@@ -1,9 +1,10 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File:   sample_gl_core.cpp
+// File:   sample_gl_core_multithreaded_tls.cpp
 // Author: Guilherme R. Lampert
-// Brief:  Debug Draw usage sample with Core Profile OpenGL (version 3+)
+// Brief:  Debug Draw usage sample with Core Profile OpenGL and separate rendering thread.
+//         Uses the implicit context as a thread-local variable of the rendering thread.
 //
 // This software is in the public domain. Where that dedication is not recognized,
 // you are granted a perpetual, irrevocable license to copy, distribute, and modify
@@ -11,6 +12,8 @@
 // ================================================================================================
 
 #define DEBUG_DRAW_IMPLEMENTATION
+#define DEBUG_DRAW_PER_THREAD_CONTEXT
+
 #include "debug_draw.hpp"     // Debug Draw API. Notice that we need the DEBUG_DRAW_IMPLEMENTATION macro here!
 #include <GL/gl3w.h>          // An OpenGL extension wrangler (https://github.com/skaslev/gl3w).
 #include "samples_common.hpp" // Common code shared by the samples (camera, input, etc).
@@ -34,6 +37,7 @@ public:
     {
         assert(points != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isOwnerThreadCall());
 
         glBindVertexArray(linePointVAO);
         glUseProgram(linePointProgram);
@@ -67,6 +71,7 @@ public:
     {
         assert(lines != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isOwnerThreadCall());
 
         glBindVertexArray(linePointVAO);
         glUseProgram(linePointProgram);
@@ -100,6 +105,7 @@ public:
     {
         assert(glyphs != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isOwnerThreadCall());
 
         glBindVertexArray(textVAO);
         glUseProgram(textProgram);
@@ -137,6 +143,7 @@ public:
     {
         assert(width > 0 && height > 0);
         assert(pixels != nullptr);
+        assert(isOwnerThreadCall());
 
         GLuint textureId = 0;
         glGenTextures(1, &textureId);
@@ -160,6 +167,7 @@ public:
 
     void destroyGlyphTexture(dd::GlyphTextureHandle glyphTex) override
     {
+        assert(isOwnerThreadCall());
         if (glyphTex == nullptr)
         {
             return;
@@ -170,10 +178,8 @@ public:
         glDeleteTextures(1, &textureId);
     }
 
-    // These two can also be implemented to perform GL render
-    // state setup/cleanup, but we don't use them in this sample.
-    //void beginDraw() override { }
-    //void endDraw()   override { }
+    void beginDraw() override { assert(isOwnerThreadCall()); }
+    void endDraw()   override { assert(isOwnerThreadCall()); }
 
     //
     // Local methods:
@@ -196,7 +202,7 @@ public:
         std::printf("GL_RENDERER  : %s\n",   glGetString(GL_RENDERER));
         std::printf("GL_VERSION   : %s\n",   glGetString(GL_VERSION));
         std::printf("GLSL_VERSION : %s\n\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-        std::printf("DDRenderInterfaceCoreGL initializing ...\n");
+        std::printf("DDRenderInterfaceCoreGL MT initializing ...\n");
 
         // Default OpenGL states:
         glEnable(GL_CULL_FACE);
@@ -209,7 +215,7 @@ public:
         setupShaderPrograms();
         setupVertexBuffers();
 
-        std::printf("DDRenderInterfaceCoreGL ready!\n\n");
+        std::printf("DDRenderInterfaceCoreGL MT ready!\n\n");
     }
 
     ~DDRenderInterfaceCoreGL()
@@ -222,6 +228,15 @@ public:
 
         glDeleteVertexArrays(1, &textVAO);
         glDeleteBuffers(1, &textVBO);
+    }
+
+    void prepareDraw(const Matrix4 & mvp)
+    {
+        assert(isOwnerThreadCall());
+
+        mvpMatrix = mvp;
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     void setupShaderPrograms()
@@ -453,11 +468,23 @@ public:
         }
     }
 
+    void setOwnerThread(std::thread::id tid)
+    {
+        ownerThreadId = tid;
+    }
+
+    bool isOwnerThreadCall() const
+    {
+        return std::this_thread::get_id() == ownerThreadId;
+    }
+
+private:
+
+    std::thread::id ownerThreadId;
+
     // The "model-view-projection" matrix for the scene.
     // In this demo, it consists of the camera's view and projection matrices only.
     Matrix4 mvpMatrix;
-
-private:
 
     GLuint linePointProgram;
     GLint  linePointProgram_MvpMatrixLocation;
@@ -553,14 +580,77 @@ const char * DDRenderInterfaceCoreGL::textFragShaderSrc = "\n"
 // GLFW / window management / sample drawing:
 // ========================================================
 
-static void drawGrid()
+// https://stackoverflow.com/questions/4792449/c0x-has-no-semaphores-how-to-synchronize-threads
+class Semaphore final
 {
-    if (!keys.showGrid)
+public:
+    Semaphore(int n = 0) : count(n)
+    { }
+
+    void signal()
     {
-        return;
+        std::unique_lock<std::mutex> lock(mtx);
+        count++;
+        cv.notify_one();
     }
-    dd::xzSquareGrid(-50.0f, 50.0f, -1.0f, 1.7f, dd::colors::Green); // Grid from -50 to +50 in both X & Z
-}
+
+    void wait()
+    {
+        std::unique_lock<std::mutex> lock(mtx);
+        while (count == 0)
+        {
+            cv.wait(lock);
+        }
+        count--;
+    }
+
+private:
+    std::mutex mtx;
+    std::condition_variable cv;
+    int count;
+};
+
+// ========================================================
+
+struct ThreadData
+{
+    volatile bool shouldQuit;
+
+    DDRenderInterfaceCoreGL * renderInterface;
+    void (*threadFunc)(ThreadData &);
+    GLFWwindow * window;
+
+    std::thread threadObject;
+    Semaphore mainDone;
+    Semaphore renderDone;
+
+    ThreadData() : mainDone(0), renderDone(1)
+    { }
+
+    void init(void (*fn)(ThreadData &), DDRenderInterfaceCoreGL * ri, GLFWwindow * win)
+    {
+        shouldQuit      = false;
+        renderInterface = ri;
+        threadFunc      = fn;
+        window          = win;
+        threadObject    = std::thread([this]{ threadFunc(*this); });
+    }
+
+    void shutdown()
+    {
+        shouldQuit = true;
+        if (threadObject.joinable())
+        {
+            threadObject.join();
+        }
+
+        renderInterface = nullptr;
+        threadFunc      = nullptr;
+        window          = nullptr;
+    }
+};
+
+// ========================================================
 
 static void drawLabel(ddVec3_In pos, const char * name)
 {
@@ -575,6 +665,14 @@ static void drawLabel(ddVec3_In pos, const char * name)
         const ddVec3 textColor = { 0.8f, 0.8f, 1.0f };
         dd::projectedText(name, pos, textColor, toFloatPtr(camera.vpMatrix),
                           0, 0, WindowWidth, WindowHeight, 0.5f);
+    }
+}
+
+static void drawGrid()
+{
+    if (keys.showGrid)
+    {
+        dd::xzSquareGrid(-50.0f, 50.0f, -1.0f, 1.7f, dd::colors::Green); // Grid from -50 to +50 in both X & Z
     }
 }
 
@@ -689,33 +787,42 @@ static void drawText()
     // HUD text:
     const ddVec3 textColor = { 1.0f,  1.0f,  1.0f };
     const ddVec3 textPos2D = { 10.0f, 15.0f, 0.0f };
-    dd::screenText("Welcome to the Core OpenGL Debug Draw demo.\n\n"
+    dd::screenText("Welcome to the multi-threaded Core OpenGL Debug Draw demo.\n\n"
                    "[SPACE]  to toggle labels on/off\n"
                    "[RETURN] to toggle grid on/off",
                    textPos2D, textColor, 0.55f);
 }
 
-static void sampleAppDraw(DDRenderInterfaceCoreGL & ddRenderIfaceGL)
+static void sampleAppRenderThread(ThreadData & td)
 {
-    // Camera input update (the 'camera' object is declared in samples_common.hpp):
-    camera.checkKeyboardMovement();
-    camera.checkMouseRotation();
-    camera.updateMatrices();
+    std::printf("Render thread starting...\n");
 
-    // Send the camera matrix to the shaders:
-    ddRenderIfaceGL.mvpMatrix = camera.vpMatrix;
+    // Take ownership of the OpenGL context for this thread:
+    glfwMakeContextCurrent(td.window);
+    td.renderInterface->setOwnerThread(std::this_thread::get_id());
 
-    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    dd::initialize(td.renderInterface);
 
-    // Call some DD functions to add stuff to the debug draw queues:
-    drawGrid();
-    drawMiscObjects();
-    drawFrustum();
-    drawText();
+    while (!td.shouldQuit)
+    {
+        td.mainDone.wait();
 
-    // Drawing only really happens now (here's where RenderInterface gets called).
-    dd::flush(getTimeMilliseconds());
+        td.renderInterface->prepareDraw(camera.vpMatrix);
+
+        // Call some DD functions to add stuff to the debug draw queues:
+        drawGrid();
+        drawMiscObjects();
+        drawFrustum();
+        drawText();
+
+        dd::flush(getTimeMilliseconds());
+        glfwSwapBuffers(td.window);
+
+        td.renderDone.signal();
+    }
+
+    std::printf("Render thread exiting...\n");
+    dd::shutdown();
 }
 
 static void sampleAppStart()
@@ -737,7 +844,7 @@ static void sampleAppStart()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     GLFWwindow * window = glfwCreateWindow(WindowWidth, WindowHeight,
-                                           "Debug Draw Sample - Core OpenGL",
+                                           "Debug Draw Sample - Core OpenGL (MT, implicit context)",
                                            nullptr, nullptr);
     if (!window)
     {
@@ -762,18 +869,27 @@ static void sampleAppStart()
     // From samples_common.hpp
     initInput(window);
 
-    // Set up the Debug Draw:
+    // Set up an OpenGL renderer:
     DDRenderInterfaceCoreGL ddRenderIfaceGL;
-    dd::initialize(&ddRenderIfaceGL);
+
+    // Launch the rendering thread that will call the DD functions:
+    ThreadData renderThread;
+    renderThread.init(&sampleAppRenderThread, &ddRenderIfaceGL, window);
 
     // Loop until the user closes the window:
     while (!glfwWindowShouldClose(window))
     {
         const double t0s = glfwGetTime();
 
-        sampleAppDraw(ddRenderIfaceGL);
-        glfwSwapBuffers(window);
+        renderThread.renderDone.wait();
+
+        camera.checkKeyboardMovement();
+        camera.checkMouseRotation();
+        camera.updateMatrices();
+
         glfwPollEvents();
+
+        renderThread.mainDone.signal();
 
         const double t1s = glfwGetTime();
 
@@ -781,7 +897,7 @@ static void sampleAppStart()
         deltaTime.milliseconds = static_cast<std::int64_t>(deltaTime.seconds * 1000.0);
     }
 
-    dd::shutdown();
+    renderThread.shutdown();
 }
 
 // ========================================================

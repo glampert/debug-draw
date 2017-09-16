@@ -1,10 +1,9 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File: vectormath.h
+// File:   vectormath.h
 // Author: Guilherme R. Lampert
-// Created on: 15/11/15
-// Brief: This header exposes the Sony Vector Math library types into the global scope.
+// Brief:  This header exposes the Sony Vector Math library types into the global scope.
 // ================================================================================================
 
 #ifndef VECTORMATH_H_

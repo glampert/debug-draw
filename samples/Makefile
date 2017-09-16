@@ -20,12 +20,17 @@ endif
 
 # GLFW Should be installed and visible in the system path!
 ifeq ($(UNAME), Darwin)
-  CXXFLAGS = -Weffc++
-  GLFW_LIB = -L/usr/local/lib -lglfw3
+  CXXFLAGS += -Weffc++
+  GLFW_LIB  = -L/usr/local/lib -lglfw3
 endif
 ifeq ($(UNAME), Linux)
-  CXXFLAGS = `pkg-config --cflags glfw3`
-  GLFW_LIB = `pkg-config --static --libs glfw3`
+  CXXFLAGS += `pkg-config --cflags glfw3`
+  GLFW_LIB  = `pkg-config --static --libs glfw3`
+endif
+
+# Compile an Address Sanitizer build if this flag is set
+ifdef ASAN
+  CXXFLAGS += -g -fsanitize=address -fno-omit-frame-pointer
 endif
 
 # Define 'VERBOSE' to get the full console output.
@@ -42,17 +47,28 @@ endif
 
 LIBRARIES = $(OPENGL_LIB) $(GLFW_LIB)
 INC_DIRS  = -I. -I.. -Ivectormath -Igl3w/include
-CXXFLAGS += $(INC_DIRS) -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
+CXXFLAGS += $(INC_DIRS) -std=c++11 -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
 CFLAGS    = $(CXXFLAGS)
 
+# Null renderer sample:
+SRC_FILES_NULL_SAMP  = sample_null_renderer.cpp
+BIN_TARGET_NULL_SAMP = sample_null_renderer
+
+# Legacy OpenGL sample:
 SRC_FILES_GL_LEGACY_SAMP  = sample_gl_legacy.cpp
 BIN_TARGET_GL_LEGACY_SAMP = sample_gl_legacy
 
+# Core OpenGL sample:
 SRC_FILES_GL_CORE_SAMP  = gl3w/src/gl3w.cpp sample_gl_core.cpp
 BIN_TARGET_GL_CORE_SAMP = sample_gl_core
 
-SRC_FILES_NULL_SAMP  = sample_null_renderer.cpp
-BIN_TARGET_NULL_SAMP = sample_null_renderer
+# Multi-threaded sample with explicit context:
+SRC_FILES_GL_CORE_MT_SAMP_1  = gl3w/src/gl3w.cpp sample_gl_core_multithreaded_explicit.cpp
+BIN_TARGET_GL_CORE_MT_SAMP_1 = sample_gl_core_multithreaded_explicit
+
+# Multi-threaded sample with thread-local implicit context:
+SRC_FILES_GL_CORE_MT_SAMP_2  = gl3w/src/gl3w.cpp sample_gl_core_multithreaded_tls.cpp
+BIN_TARGET_GL_CORE_MT_SAMP_2 = sample_gl_core_multithreaded_tls
 
 #------------------------------------------------
 # Build rules:
@@ -60,13 +76,18 @@ BIN_TARGET_NULL_SAMP = sample_null_renderer
 
 all:
 	$(ECHO_COMPILING)
-	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_NULL_SAMP)      -o $(BIN_TARGET_NULL_SAMP)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_NULL_SAMP) -o $(BIN_TARGET_NULL_SAMP)
 	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_LEGACY_SAMP) -o $(BIN_TARGET_GL_LEGACY_SAMP) $(LIBRARIES)
-	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_CORE_SAMP)   -o $(BIN_TARGET_GL_CORE_SAMP)   $(LIBRARIES)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_CORE_SAMP) -o $(BIN_TARGET_GL_CORE_SAMP) $(LIBRARIES)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_CORE_MT_SAMP_1) -o $(BIN_TARGET_GL_CORE_MT_SAMP_1) $(LIBRARIES)
+	$(QUIET) $(CXX) $(CXXFLAGS) $(SRC_FILES_GL_CORE_MT_SAMP_2) -o $(BIN_TARGET_GL_CORE_MT_SAMP_2) $(LIBRARIES)
 
 clean:
 	$(ECHO_CLEANING)
 	$(QUIET) rm -f $(BIN_TARGET_NULL_SAMP)
 	$(QUIET) rm -f $(BIN_TARGET_GL_LEGACY_SAMP)
 	$(QUIET) rm -f $(BIN_TARGET_GL_CORE_SAMP)
+	$(QUIET) rm -f $(BIN_TARGET_GL_CORE_MT_SAMP_1)
+	$(QUIET) rm -f $(BIN_TARGET_GL_CORE_MT_SAMP_2)
+	$(QUIET) rm -rf *.dSYM
 

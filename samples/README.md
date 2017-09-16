@@ -4,7 +4,7 @@
 Three sample programs showing basic usage of the Debug Draw library are currently provided:
 
 - `sample_null_renderer.cpp`: Just a tiny `main()` that calls a couple functions and exists.
-  This sample is meant to test if the library will compile without errors.
+  This sample is meant only to test if the library will compile without errors.
 
 - `sample_gl_core.cpp`: Sample using core (shader-based) OpenGL that draws a handful of debug
   shapes using the library. You can move around using `W,A,S,D` or the arrow keys. Click on the
@@ -13,6 +13,9 @@ Three sample programs showing basic usage of the Debug Draw library are currentl
 - `sample_gl_legacy.cpp`: Exact same as the core GL sample, but uses a legacy (AKA fixed-function)
   OpenGL renderer instead.
 
+- `sample_gl_core_multithreaded_tls.cpp` and `sample_gl_core_multithreaded_explicit.cpp` are
+  similar to the Core OpenGL sample but demonstrate how to use the TLS or explicit context modes.
+
 - `samples_common.hpp`: Contains code shared by all samples, such as input handling and camera/controls.
 
 ----
@@ -20,13 +23,13 @@ Three sample programs showing basic usage of the Debug Draw library are currentl
 To build the samples on Linux or MacOS, run the provided Makefile.
 For Windows, Visual Studio projects are included for VS2015.
 
-The only external dependency to build the samples is [GLFW](http://www.glfw.org/). Make sure to install
+The only external dependency required to build the samples is [GLFW](http://www.glfw.org/). Make sure to install
 it before attempting to build them. [GL3W](https://github.com/skaslev/gl3w) is our extension wrangler
-for the core GL sample. It is included here and builds with DD. Sony's Vectormath library is also
+for the Core OpenGL sample. It is included here and builds with DD. Sony's Vectormath library is also
 a dependency, but it is included as well. Those libraries are only required for the samples and
 not by Debug Draw itself.
 
-The samples have only been officially tested on MacOS and Windows 7, though should build and run fine
+The samples have only been officially tested on MacOS and Windows 7 & 10, though should build and run fine
 on Linux, provided that you have GLFW installed. Running them requires at least OpenGL v3.2, but due
 to hardware differences there's no guarantee that they will render the expected outputs, even if your machine supports GL3+.
 Little to no handling is done to account for GL version and hardware differences, so the samples might not run properly on your hardware.

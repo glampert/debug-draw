@@ -1,9 +1,11 @@
 
 // ================================================================================================
 // -*- C++ -*-
-// File:   sample_gl_core.cpp
+// File:   sample_gl_core_multithreaded_explicit.cpp
 // Author: Guilherme R. Lampert
-// Brief:  Debug Draw usage sample with Core Profile OpenGL (version 3+)
+// Brief:  Debug Draw usage sample with Core Profile OpenGL and separate rendering thread.
+//         Demonstrates the use of DEBUG_DRAW_EXPLICIT_CONTEXT with threads/async calls
+//         and multiple contexts.
 //
 // This software is in the public domain. Where that dedication is not recognized,
 // you are granted a perpetual, irrevocable license to copy, distribute, and modify
@@ -11,6 +13,8 @@
 // ================================================================================================
 
 #define DEBUG_DRAW_IMPLEMENTATION
+#define DEBUG_DRAW_EXPLICIT_CONTEXT
+
 #include "debug_draw.hpp"     // Debug Draw API. Notice that we need the DEBUG_DRAW_IMPLEMENTATION macro here!
 #include <GL/gl3w.h>          // An OpenGL extension wrangler (https://github.com/skaslev/gl3w).
 #include "samples_common.hpp" // Common code shared by the samples (camera, input, etc).
@@ -34,6 +38,7 @@ public:
     {
         assert(points != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isMainThread()); // GL calls from the main thread only!
 
         glBindVertexArray(linePointVAO);
         glUseProgram(linePointProgram);
@@ -67,6 +72,7 @@ public:
     {
         assert(lines != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isMainThread()); // GL calls from the main thread only!
 
         glBindVertexArray(linePointVAO);
         glUseProgram(linePointProgram);
@@ -100,6 +106,7 @@ public:
     {
         assert(glyphs != nullptr);
         assert(count > 0 && count <= DEBUG_DRAW_VERTEX_BUFFER_SIZE);
+        assert(isMainThread()); // GL calls from the main thread only!
 
         glBindVertexArray(textVAO);
         glUseProgram(textProgram);
@@ -137,6 +144,7 @@ public:
     {
         assert(width > 0 && height > 0);
         assert(pixels != nullptr);
+        assert(isMainThread()); // GL calls from the main thread only!
 
         GLuint textureId = 0;
         glGenTextures(1, &textureId);
@@ -160,6 +168,7 @@ public:
 
     void destroyGlyphTexture(dd::GlyphTextureHandle glyphTex) override
     {
+        assert(isMainThread()); // GL calls from the main thread only!
         if (glyphTex == nullptr)
         {
             return;
@@ -170,10 +179,8 @@ public:
         glDeleteTextures(1, &textureId);
     }
 
-    // These two can also be implemented to perform GL render
-    // state setup/cleanup, but we don't use them in this sample.
-    //void beginDraw() override { }
-    //void endDraw()   override { }
+    void beginDraw() override { assert(isMainThread()); }
+    void endDraw()   override { assert(isMainThread()); }
 
     //
     // Local methods:
@@ -196,7 +203,7 @@ public:
         std::printf("GL_RENDERER  : %s\n",   glGetString(GL_RENDERER));
         std::printf("GL_VERSION   : %s\n",   glGetString(GL_VERSION));
         std::printf("GLSL_VERSION : %s\n\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
-        std::printf("DDRenderInterfaceCoreGL initializing ...\n");
+        std::printf("DDRenderInterfaceCoreGL MT initializing ...\n");
 
         // Default OpenGL states:
         glEnable(GL_CULL_FACE);
@@ -209,7 +216,7 @@ public:
         setupShaderPrograms();
         setupVertexBuffers();
 
-        std::printf("DDRenderInterfaceCoreGL ready!\n\n");
+        std::printf("DDRenderInterfaceCoreGL MT ready!\n\n");
     }
 
     ~DDRenderInterfaceCoreGL()
@@ -222,6 +229,15 @@ public:
 
         glDeleteVertexArrays(1, &textVAO);
         glDeleteBuffers(1, &textVBO);
+    }
+
+    void prepareDraw(const Matrix4 & mvp)
+    {
+        assert(isMainThread());
+
+        mvpMatrix = mvp;
+        glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
 
     void setupShaderPrograms()
@@ -453,11 +469,11 @@ public:
         }
     }
 
+private:
+
     // The "model-view-projection" matrix for the scene.
     // In this demo, it consists of the camera's view and projection matrices only.
     Matrix4 mvpMatrix;
-
-private:
 
     GLuint linePointProgram;
     GLint  linePointProgram_MvpMatrixLocation;
@@ -553,16 +569,34 @@ const char * DDRenderInterfaceCoreGL::textFragShaderSrc = "\n"
 // GLFW / window management / sample drawing:
 // ========================================================
 
-static void drawGrid()
+struct ThreadData
 {
-    if (!keys.showGrid)
-    {
-        return;
-    }
-    dd::xzSquareGrid(-50.0f, 50.0f, -1.0f, 1.7f, dd::colors::Green); // Grid from -50 to +50 in both X & Z
-}
+    dd::ContextHandle ddContext;
+    DDRenderInterfaceCoreGL * renderInterface;
+    void (*threadDrawFunc)(const ThreadData &);
 
-static void drawLabel(ddVec3_In pos, const char * name)
+    void init(void (*fn)(const ThreadData &), DDRenderInterfaceCoreGL * ri)
+    {
+        ddContext       = nullptr;
+        renderInterface = ri;
+        threadDrawFunc  = fn;
+
+        dd::initialize(&ddContext, renderInterface);
+    }
+
+    void shutdown()
+    {
+        dd::shutdown(ddContext);
+
+        ddContext       = nullptr;
+        renderInterface = nullptr;
+        threadDrawFunc  = nullptr;
+    }
+};
+
+// ========================================================
+
+static void drawLabel(const ThreadData & td, ddVec3_In pos, const char * name)
 {
     if (!keys.showLabels)
     {
@@ -573,40 +607,48 @@ static void drawLabel(ddVec3_In pos, const char * name)
     if (camera.isPointInsideFrustum(pos[0], pos[1], pos[2]))
     {
         const ddVec3 textColor = { 0.8f, 0.8f, 1.0f };
-        dd::projectedText(name, pos, textColor, toFloatPtr(camera.vpMatrix),
+        dd::projectedText(td.ddContext, name, pos, textColor, toFloatPtr(camera.vpMatrix),
                           0, 0, WindowWidth, WindowHeight, 0.5f);
     }
 }
 
-static void drawMiscObjects()
+static void drawGrid(const ThreadData & td)
+{
+    if (keys.showGrid)
+    {
+        dd::xzSquareGrid(td.ddContext, -50.0f, 50.0f, -1.0f, 1.7f, dd::colors::Green); // Grid from -50 to +50 in both X & Z
+    }
+}
+
+static void drawMiscObjects(const ThreadData & td)
 {
     // Start a row of objects at this position:
     ddVec3 origin = { -15.0f, 0.0f, 0.0f };
 
     // Box with a point at it's center:
-    drawLabel(origin, "box");
-    dd::box(origin, dd::colors::Blue, 1.5f, 1.5f, 1.5f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "box");
+    dd::box(td.ddContext, origin, dd::colors::Blue, 1.5f, 1.5f, 1.5f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 3.0f;
 
     // Sphere with a point at its center
-    drawLabel(origin, "sphere");
-    dd::sphere(origin, dd::colors::Red, 1.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "sphere");
+    dd::sphere(td.ddContext, origin, dd::colors::Red, 1.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Two cones, one open and one closed:
     const ddVec3 condeDir = { 0.0f, 2.5f, 0.0f };
     origin[1] -= 1.0f;
 
-    drawLabel(origin, "cone (open)");
-    dd::cone(origin, condeDir, dd::colors::Yellow, 1.0f, 2.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "cone (open)");
+    dd::cone(td.ddContext, origin, condeDir, dd::colors::Yellow, 1.0f, 2.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
-    drawLabel(origin, "cone (closed)");
-    dd::cone(origin, condeDir, dd::colors::Cyan, 0.0f, 1.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "cone (closed)");
+    dd::cone(td.ddContext, origin, condeDir, dd::colors::Cyan, 0.0f, 1.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Axis-aligned bounding box:
@@ -617,9 +659,9 @@ static void drawMiscObjects()
         (bbMins[1] + bbMaxs[1]) * 0.5f,
         (bbMins[2] + bbMaxs[2]) * 0.5f
     };
-    drawLabel(origin, "AABB");
-    dd::aabb(bbMins, bbMaxs, dd::colors::Orange);
-    dd::point(bbCenter, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "AABB");
+    dd::aabb(td.ddContext, bbMins, bbMaxs, dd::colors::Orange);
+    dd::point(td.ddContext, bbCenter, dd::colors::White, 15.0f);
 
     // Move along the Z for another row:
     origin[0] = -15.0f;
@@ -628,23 +670,23 @@ static void drawMiscObjects()
     // A big arrow pointing up:
     const ddVec3 arrowFrom = { origin[0], origin[1], origin[2] };
     const ddVec3 arrowTo   = { origin[0], origin[1] + 5.0f, origin[2] };
-    drawLabel(arrowFrom, "arrow");
-    dd::arrow(arrowFrom, arrowTo, dd::colors::Magenta, 1.0f);
-    dd::point(arrowFrom, dd::colors::White, 15.0f);
-    dd::point(arrowTo, dd::colors::White, 15.0f);
+    drawLabel(td, arrowFrom, "arrow");
+    dd::arrow(td.ddContext, arrowFrom, arrowTo, dd::colors::Magenta, 1.0f);
+    dd::point(td.ddContext, arrowFrom, dd::colors::White, 15.0f);
+    dd::point(td.ddContext, arrowTo, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Plane with normal vector:
     const ddVec3 planeNormal = { 0.0f, 1.0f, 0.0f };
-    drawLabel(origin, "plane");
-    dd::plane(origin, planeNormal, dd::colors::Yellow, dd::colors::Blue, 1.5f, 1.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "plane");
+    dd::plane(td.ddContext, origin, planeNormal, dd::colors::Yellow, dd::colors::Blue, 1.5f, 1.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 4.0f;
 
     // Circle on the Y plane:
-    drawLabel(origin, "circle");
-    dd::circle(origin, planeNormal, dd::colors::Orange, 1.5f, 15.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "circle");
+    dd::circle(td.ddContext, origin, planeNormal, dd::colors::Orange, 1.5f, 15.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
     origin[0] += 3.2f;
 
     // Tangent basis vectors:
@@ -652,70 +694,76 @@ static void drawMiscObjects()
     const ddVec3 tangent   = { 1.0f, 0.0f, 0.0f };
     const ddVec3 bitangent = { 0.0f, 0.0f, 1.0f };
     origin[1] += 0.1f;
-    drawLabel(origin, "tangent basis");
-    dd::tangentBasis(origin, normal, tangent, bitangent, 2.5f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "tangent basis");
+    dd::tangentBasis(td.ddContext, origin, normal, tangent, bitangent, 2.5f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
 
     // And a set of intersecting axes:
     origin[0] += 4.0f;
     origin[1] += 1.0f;
-    drawLabel(origin, "cross");
-    dd::cross(origin, 2.0f);
-    dd::point(origin, dd::colors::White, 15.0f);
+    drawLabel(td, origin, "cross");
+    dd::cross(td.ddContext, origin, 2.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
 }
 
-static void drawFrustum()
+static void drawFrustum(const ThreadData & td)
 {
     const ddVec3 color  = {  0.8f, 0.3f, 1.0f  };
     const ddVec3 origin = { -8.0f, 0.5f, 14.0f };
-    drawLabel(origin, "frustum + axes");
+    drawLabel(td, origin, "frustum + axes");
 
     // The frustum will depict a fake camera:
     const Matrix4 proj = Matrix4::perspective(degToRad(45.0f), 800.0f / 600.0f, 0.5f, 4.0f);
     const Matrix4 view = Matrix4::lookAt(Point3(-8.0f, 0.5f, 14.0f), Point3(-8.0f, 0.5f, -14.0f), Vector3::yAxis());
     const Matrix4 clip = inverse(proj * view);
-    dd::frustum(toFloatPtr(clip), color);
+    dd::frustum(td.ddContext, toFloatPtr(clip), color);
 
     // A white dot at the eye position:
-    dd::point(origin, dd::colors::White, 15.0f);
+    dd::point(td.ddContext, origin, dd::colors::White, 15.0f);
 
     // A set of arrows at the camera's origin/eye:
     const Matrix4 transform = Matrix4::translation(Vector3(-8.0f, 0.5f, 14.0f)) * Matrix4::rotationZ(degToRad(60.0f));
-    dd::axisTriad(toFloatPtr(transform), 0.3f, 2.0f);
+    dd::axisTriad(td.ddContext, toFloatPtr(transform), 0.3f, 2.0f);
 }
 
-static void drawText()
+static void drawText(const ThreadData & td)
 {
     // HUD text:
     const ddVec3 textColor = { 1.0f,  1.0f,  1.0f };
     const ddVec3 textPos2D = { 10.0f, 15.0f, 0.0f };
-    dd::screenText("Welcome to the Core OpenGL Debug Draw demo.\n\n"
+    dd::screenText(td.ddContext,
+                   "Welcome to the multi-threaded Core OpenGL Debug Draw demo.\n\n"
                    "[SPACE]  to toggle labels on/off\n"
                    "[RETURN] to toggle grid on/off",
                    textPos2D, textColor, 0.55f);
 }
 
-static void sampleAppDraw(DDRenderInterfaceCoreGL & ddRenderIfaceGL)
+static void sampleAppDraw(DDRenderInterfaceCoreGL & ddRenderIfaceGL, ThreadData tds[4], JobQueue & jobQ)
 {
     // Camera input update (the 'camera' object is declared in samples_common.hpp):
     camera.checkKeyboardMovement();
     camera.checkMouseRotation();
     camera.updateMatrices();
 
-    // Send the camera matrix to the shaders:
-    ddRenderIfaceGL.mvpMatrix = camera.vpMatrix;
+    // Kick async render jobs:
+    for (int i = 0; i < 4; ++i)
+    {
+        const ThreadData & td = tds[i];
+        jobQ.pushJob([td]() { td.threadDrawFunc(td); });
+    }
 
-    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // Begin a frame:
+    ddRenderIfaceGL.prepareDraw(camera.vpMatrix);
 
-    // Call some DD functions to add stuff to the debug draw queues:
-    drawGrid();
-    drawMiscObjects();
-    drawFrustum();
-    drawText();
+    // Wait async draws to complete. In a more real life scenario this would
+    // be the place to perform some other non-dependent work to avoid blocking.
+    jobQ.waitAll();
 
-    // Drawing only really happens now (here's where RenderInterface gets called).
-    dd::flush(getTimeMilliseconds());
+    // Flush each individual context from the main thread:
+    for (int i = 0; i < 4; ++i)
+    {
+        dd::flush(tds[i].ddContext);
+    }
 }
 
 static void sampleAppStart()
@@ -737,7 +785,7 @@ static void sampleAppStart()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 
     GLFWwindow * window = glfwCreateWindow(WindowWidth, WindowHeight,
-                                           "Debug Draw Sample - Core OpenGL",
+                                           "Debug Draw Sample - Core OpenGL (MT, explicit context)",
                                            nullptr, nullptr);
     if (!window)
     {
@@ -762,16 +810,28 @@ static void sampleAppStart()
     // From samples_common.hpp
     initInput(window);
 
-    // Set up the Debug Draw:
+    // Set up an OpenGL renderer:
     DDRenderInterfaceCoreGL ddRenderIfaceGL;
-    dd::initialize(&ddRenderIfaceGL);
+
+    // Draw contexts:
+    ThreadData threads[4];
+    threads[0].init(&drawGrid,        &ddRenderIfaceGL);
+    threads[1].init(&drawMiscObjects, &ddRenderIfaceGL);
+    threads[2].init(&drawFrustum,     &ddRenderIfaceGL);
+    threads[3].init(&drawText,        &ddRenderIfaceGL);
+
+    // Each draw function will be pushed into the async job queue
+    // by the main thread every frame, then main will wait on it
+    // and submit the GL draw commands with dd::flush().
+    JobQueue jobQ;
+    jobQ.launch();
 
     // Loop until the user closes the window:
     while (!glfwWindowShouldClose(window))
     {
         const double t0s = glfwGetTime();
 
-        sampleAppDraw(ddRenderIfaceGL);
+        sampleAppDraw(ddRenderIfaceGL, threads, jobQ);
         glfwSwapBuffers(window);
         glfwPollEvents();
 
@@ -781,7 +841,11 @@ static void sampleAppStart()
         deltaTime.milliseconds = static_cast<std::int64_t>(deltaTime.seconds * 1000.0);
     }
 
-    dd::shutdown();
+    jobQ.waitAll();
+    for (int i = 0; i < 4; ++i)
+    {
+        threads[i].shutdown();
+    }
 }
 
 // ========================================================

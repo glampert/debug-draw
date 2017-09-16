@@ -5,7 +5,7 @@
 
 An immediate-mode, renderer agnostic, lightweight debug drawing API for C++.
 
-![Debug Draw](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/shapes.png "Debug Draw shapes")
+![Debug Draw](https://raw.githubusercontent.com/glampert/debug-draw/master/samples/images/shapes.png "Debug Draw sample")
 
 ## License
 
@@ -57,12 +57,12 @@ public:
     virtual void beginDraw();
     virtual void endDraw();
 
+    virtual GlyphTextureHandle createGlyphTexture(int width, int height, const void * pixels);
+    virtual void destroyGlyphTexture(GlyphTextureHandle glyphTex);
+
     virtual void drawPointList(const DrawVertex * points, int count, bool depthEnabled);
     virtual void drawLineList(const DrawVertex * lines, int count, bool depthEnabled);
     virtual void drawGlyphList(const DrawVertex * glyphs, int count, GlyphTextureHandle glyphTex);
-
-    virtual GlyphTextureHandle createGlyphTexture(int width, int height, const void * pixels);
-    virtual void destroyGlyphTexture(GlyphTextureHandle glyphTex);
 
     virtual ~RenderInterface() = 0;
 };
@@ -87,8 +87,8 @@ so drawing will only actually take place by the time you call `dd::flush()`, whi
 at the end of a frame, before flipping the screen buffers:
 
 ```cpp
-// You only have to pass the current time if you have
-// timed debug draws in the queues. Otherwise just pass 0.
+// You only have to pass the current time if you have timed debug
+// draws in the queues. Otherwise just omit the argument or pass 0.
 dd::flush(getTimeMilliseconds());
 ```
 
@@ -129,29 +129,42 @@ int main()
 Debug Draw provides several compiler switches for library configuration and customization.
 Check the documentation in `debug_draw.hpp` for a list of all switches plus detailed description of each.
 
-### Language requirements
+### Language/compiler requirements
 
 The library has very few language requirements. One of its main goals is to be painless to integrate
-and also to be very portable. The only requirement is a C++98 compiler or better. We check for the
-availability of a few interesting C++11 features, but fall-backs are provided so you can also integrate
-it with older projects.
+and portable. The only requirement is a fairly recent C++ compiler with minimal Standard Library support.
+Some C++11 features are assumed, such as `nullptr` and `<cstdint>`. The samples included make heavier use
+of the C++ Standard Library to demonstrate Debug Draw usage with threads.
 
 RTTI and C++ Exceptions **are not used**, so you should have no problems integrating
 the library with projects that disable those features.
 
 The memory footprint is also small and you can manage the amount of memory that gets committed
 to the internal queues via preprocessor directives. We currently only allocate a small amount of
-dynamic memory at library startup to decompress the font glyphs for the debug text drawing functions.
-Apart from that, all data used by the library is statically allocated as file scoped `static`s.
+dynamic memory at library startup to decompress the font glyphs for the debug text drawing functions
+and for the draw queues and library context data.
 
-### Thread safety
+### Thread safety and explicit contexts
 
-Due to its procedural layout and use of static data, Debug Draw *is not thread safe*,
-so its public API cannot be called from multiple threads. This shouldn't be a problem
-for the vast majority of users, since rendering doesn't lend well to parallelization. OpenGL
-and Direct3D calls are normally issued from a single thread. If you really happen to need
-thread-safety, a simple solution might be just making the `static` buffers used by the
-implementation thread-local.
+By default, Debug Draw will use a static global context internally, providing a procedural-style API that
+*is not thread safe*. This is the "classic" Debug Draw mode that is the easiest to use and set up, but
+the library also supports two other modes that are thread safe and configurable at compile time:
+
+- `DEBUG_DRAW_PER_THREAD_CONTEXT`: If this is defined before the implementation, the library will use
+  a thread-local context instead of the global shared default. This allows calling the library from
+  different threads since each will keep its private context and draw queues. This mode provides
+  the same public library interface but requires TLS (Thread Local Storage) support from the compiler.
+
+- `DEBUG_DRAW_EXPLICIT_CONTEXT`: If this is defined before the implementation, the library expects the
+  user to supply a handle to a context. This mode exposes the `dd::ContextHandle` type and changes each
+  function in the library to take this handle as the first argument. This mode makes the library fully
+  stateless, so that each rendering thread that calls into the library can create and maintain its own
+  instance of Debug Draw.
+
+The explicit context mode is a cleaner and more functional-style API and should be the preferred one for new users.
+The procedural mode is still kept as the default for compatibility with older library versions, but it is
+recommended that you use the explicit context mode by adding `#define DEBUG_DRAW_EXPLICIT_CONTEXT` together
+with `DEBUG_DRAW_IMPLEMENTATION`. In the future, the procedural stateful API will be deprecated in favor of the explicit one.
 
 ## Samples
 
@@ -165,7 +178,7 @@ dd::box(boxCenter, boxColor, 1.5f, 1.5f, 1.5f);
 dd::cross(boxCenter, 1.0f);
 ```
 
-![box](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/box.png "Box with coordinate axes")
+![box](https://raw.githubusercontent.com/glampert/debug-draw/master/samples/images/box.png "Box with coordinate axes")
 
 To visualize a matrix transform, you can use `dd::axisTriad()`
 to draw the transform as three arrows:
@@ -180,10 +193,10 @@ const ddMat4x4 transform = { // The identity matrix
 dd::axisTriad(transform, 0.3f, 2.0f);
 ```
 
-![arrows](https://raw.githubusercontent.com/glampert/debug-draw/master/extras/arrows.png "Axis triad repesenting a 3D transform")
+![arrows](https://raw.githubusercontent.com/glampert/debug-draw/master/samples/images/arrows.png "Axis triad repesenting a 3D transform")
 
-More complex samples and how to integrate Debug Draw with your own renderer can
-be found inside the `samples/` directory. Each function provided the API is also well
+More complex samples and examples on how to integrate Debug Draw with your own renderer can
+be found inside the `samples/` directory. Each function provided in the public API is also well
 documented in the header file. You will find a descriptive header comment before
-the prototype of each public function exposed by the library.
+the prototype of each public function exported by the library.
 
