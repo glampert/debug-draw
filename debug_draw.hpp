@@ -829,9 +829,10 @@ namespace dd
 static const float HalfPI = PI * 0.5f;
 static const float TAU    = PI * 2.0f;
 
-static inline float degreesToRadians(const float degrees)
+template<typename T>
+static inline float degreesToRadians(const T degrees)
 {
-    return (degrees * PI / 180.0f);
+    return (static_cast<float>(degrees) * PI / 180.0f);
 }
 
 template<typename T, int Size>

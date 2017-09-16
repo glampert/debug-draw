@@ -25,7 +25,7 @@ ifeq ($(UNAME), Darwin)
   LIBRARIES = -framework Cocoa -framework IOKit -framework CoreVideo
 endif
 ifeq ($(UNAME), Linux)
-  CXXFLAGS += -Wno-strict-aliasing `pkg-config --cflags glfw3`
+  CXXFLAGS += `pkg-config --cflags glfw3`
   GLFW_LIB  = `pkg-config --static --libs glfw3`
 endif
 
@@ -48,7 +48,7 @@ endif
 
 LIBRARIES += $(OPENGL_LIB) $(GLFW_LIB)
 INC_DIRS   = -I. -I.. -Ivectormath -Igl3w/include
-CXXFLAGS  += $(INC_DIRS) -std=c++11 -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow
+CXXFLAGS  += $(INC_DIRS) -std=c++11 -O3 -Wall -Wextra -Winit-self -Wunused -Wshadow -Wno-strict-aliasing
 CFLAGS     = $(CXXFLAGS)
 
 # Null renderer sample:
