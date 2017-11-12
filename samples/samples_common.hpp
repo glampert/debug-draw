@@ -13,22 +13,28 @@
 #ifndef DD_SAMPLES_COMMON_HPP
 #define DD_SAMPLES_COMMON_HPP
 
+// #define DD_SAMPLES_NOGL to exclude all OpenGL/GLFW
+// related code (e.g.: for the D3D Win32 samples)
+
 #include <cassert>
 #include <cmath>
+#include <cstdarg>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
-#include <cstdarg>
 
+#include <chrono>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
 #include <queue>
 #include <thread>
-
-#include <GLFW/glfw3.h>
 #include <vectormath.h>
+
+#ifndef DD_SAMPLES_NOGL
+    #include <GLFW/glfw3.h>
+#endif // DD_SAMPLES_NOGL
 
 namespace ddSamplesCommon
 {
@@ -43,11 +49,19 @@ static inline float degToRad(const float degrees)
     return (degrees * 3.1415926535897931f / 180.0f);
 }
 
+#ifndef DD_SAMPLES_NOGL
+
 // Time in milliseconds since the application started.
 static inline std::int64_t getTimeMilliseconds()
 {
     const double seconds = glfwGetTime();
     return static_cast<std::int64_t>(seconds * 1000.0);
+}
+
+// Time in seconds since the application started.
+static inline double getTimeSeconds()
+{
+    return glfwGetTime();
 }
 
 // GL error enum to printable string.
@@ -65,6 +79,24 @@ static inline const char * errorToString(const GLenum errorCode)
     default                   : return "Unknown GL error";
     } // switch (errorCode)
 }
+
+#else // DD_SAMPLES_NOGL defined
+
+using TimePoint = std::chrono::time_point<std::chrono::high_resolution_clock>;
+static TimePoint startupTime = std::chrono::high_resolution_clock::now();
+
+static inline std::int64_t getTimeMilliseconds()
+{
+    const auto currentTime = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - startupTime).count();
+}
+
+static inline double getTimeSeconds()
+{
+    return getTimeMilliseconds() * 0.001f;
+}
+
+#endif // DD_SAMPLES_NOGL
 
 // Prints error to standard error stream.
 static inline void errorF(const char * format, ...)
@@ -161,6 +193,10 @@ struct Camera
     enum { A, B, C, D };
     Vector4 planes[6];
 
+    // Tunable values:
+    float movementSpeed = 3.0f;
+    float lookSpeed     = 6.0f;
+
     enum MoveDir
     {
         Forward, // Move forward relative to the camera's space
@@ -234,7 +270,7 @@ struct Camera
 
     void checkKeyboardMovement()
     {
-        const float moveSpeed = 3.0f * deltaTime.seconds;
+        const float moveSpeed = movementSpeed * deltaTime.seconds;
         if (keys.aDown) { move(Camera::Left,    moveSpeed); }
         if (keys.dDown) { move(Camera::Right,   moveSpeed); }
         if (keys.wDown) { move(Camera::Forward, moveSpeed); }
@@ -251,7 +287,7 @@ struct Camera
             return;
         }
 
-        const float rotateSpeed = 6.0f * deltaTime.seconds;
+        const float rotateSpeed = lookSpeed * deltaTime.seconds;
 
         // Rotate left/right:
         float amt = static_cast<float>(mouse.deltaX) * rotateSpeed;
@@ -361,6 +397,8 @@ struct Camera
     }
 } camera;
 
+#ifndef DD_SAMPLES_NOGL
+
 // ========================================================
 // Input callbacks for GLFW:
 // ========================================================
@@ -438,6 +476,8 @@ static void initInput(GLFWwindow * window)
     glfwSetMouseButtonCallback(window, &mouseButtonCallback);
     glfwSetKeyCallback(window,         &keyCallback);
 }
+
+#endif // DD_SAMPLES_NOGL
 
 // ========================================================
 // MainThreadChecker - test if the calling thread is main()

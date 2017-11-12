@@ -16,6 +16,8 @@ Three sample programs showing basic usage of the Debug Draw library are currentl
 - `sample_gl_core_multithreaded_tls.cpp` and `sample_gl_core_multithreaded_explicit.cpp` are
   similar to the Core OpenGL sample but demonstrate how to use the TLS or explicit context modes.
 
+- `sample_d3d11.cpp`: Windows sample using D3D11 as the renderer interface for Debug Draw.
+
 - `samples_common.hpp`: Contains code shared by all samples, such as input handling and camera/controls.
 
 ----

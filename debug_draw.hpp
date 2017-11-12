@@ -698,7 +698,7 @@ union DrawVertex
 // Opaque handle to a texture object.
 // Used by the debug text drawing functions.
 //
-struct OpaqueTextureType;
+struct OpaqueTextureType { };
 typedef OpaqueTextureType * GlyphTextureHandle;
 
 // ========================================================
