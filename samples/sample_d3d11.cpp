@@ -111,12 +111,12 @@ public:
     // DPI scaling helpers:
     //
 
-    static const std::tuple<float, float> DipXY;
+    static const std::tuple<float, float> DpiXY;
     static const int WidthScaled;
     static const int HeightScaled;
 
-    static int GetDpiAdjustedX(int size) { return static_cast<int>(size * std::get<0>(DipXY) / 96.0f); }
-    static int GetDpiAdjustedY(int size) { return static_cast<int>(size * std::get<1>(DipXY) / 96.0f); }
+    static int GetDpiAdjustedX(int size) { return static_cast<int>(size * std::get<0>(DpiXY) / 96.0f); }
+    static int GetDpiAdjustedY(int size) { return static_cast<int>(size * std::get<1>(DpiXY) / 96.0f); }
 
     static std::tuple<float, float> GetDpiXY()
     {
@@ -208,7 +208,7 @@ private:
 };
 
 // Caching these for convenience
-const std::tuple<float, float> Window::DipXY = Window::GetDpiXY();
+const std::tuple<float, float> Window::DpiXY = Window::GetDpiXY();
 const int Window::WidthScaled  = Window::GetDpiAdjustedX(WindowWidth);
 const int Window::HeightScaled = Window::GetDpiAdjustedY(WindowHeight);
 
