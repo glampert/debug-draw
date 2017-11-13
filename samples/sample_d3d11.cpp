@@ -24,6 +24,7 @@ using namespace ddSamplesCommon;
 #define NOIME
 #define NOMINMAX
 #define WIN32_LEAN_AND_MEAN
+#include <ShellScalingAPI.h>
 #include <windows.h>
 #include <wrl.h>
 
@@ -33,6 +34,7 @@ using namespace ddSamplesCommon;
 #include <d3dcompiler.h>
 #include <DirectXMath.h>
 
+#pragma comment(lib, "Shcore")
 #pragma comment(lib, "d3d11")
 #pragma comment(lib, "dxguid")
 #pragma comment(lib, "d3dcompiler")
@@ -105,6 +107,31 @@ public:
 
     virtual void onRender() { }
 
+    //
+    // DPI scaling helpers:
+    //
+
+    static const std::tuple<float, float> DipXY;
+    static const int WidthScaled;
+    static const int HeightScaled;
+
+    static int GetDpiAdjustedX(int size) { return static_cast<int>(size * std::get<0>(DipXY) / 96.0f); }
+    static int GetDpiAdjustedY(int size) { return static_cast<int>(size * std::get<1>(DipXY) / 96.0f); }
+
+    static std::tuple<float, float> GetDpiXY()
+    {
+        const POINT ptZero = {0,0};
+        HMONITOR hm = MonitorFromPoint(ptZero, MONITOR_DEFAULTTOPRIMARY);
+
+        UINT dpiX = 0, dpiY = 0;
+        if (FAILED(GetDpiForMonitor(hm, MDT_EFFECTIVE_DPI, &dpiX, &dpiY)))
+        {
+            dpiX = dpiY = 192; // Some arbitrary default (2x scaling)
+        }
+
+        return {float(dpiX), float(dpiY)};
+    }
+
 private:
 
     void registerClass()
@@ -125,8 +152,8 @@ private:
     void createWindow(int nCmdShow)
     {
         hWindow = CreateWindow(WindowClassName, WindowTitle, WS_OVERLAPPEDWINDOW,
-                               0, 0, WindowWidth, WindowHeight, nullptr, nullptr,
-                               hInst, nullptr);
+                               0, 0, WidthScaled, HeightScaled,
+                               nullptr, nullptr, hInst, nullptr);
         if (hWindow == nullptr)
         {
             panicF("Failed to create application window!");
@@ -154,9 +181,9 @@ private:
                 int my = HIWORD(lParam); 
 
                 // Clamp to window bounds:
-                if      (mx > WindowWidth)  { mx = WindowWidth;  }
+                if      (mx > WidthScaled)  { mx = WidthScaled;  }
                 else if (mx < 0)            { mx = 0;            }
-                if      (my > WindowHeight) { my = WindowHeight; }
+                if      (my > HeightScaled) { my = HeightScaled; }
                 else if (my < 0)            { my = 0;            }
 
                 mouse.deltaX = mx - mouse.lastPosX;
@@ -179,6 +206,11 @@ private:
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
 };
+
+// Caching these for convenience
+const std::tuple<float, float> Window::DipXY = Window::GetDpiXY();
+const int Window::WidthScaled  = Window::GetDpiAdjustedX(WindowWidth);
+const int Window::HeightScaled = Window::GetDpiAdjustedY(WindowHeight);
 
 // ========================================================
 // RenderWindowD3D11
@@ -219,8 +251,8 @@ private:
     void initD3D()
     {
         UINT createDeviceFlags = 0;
-        const UINT width  = WindowWidth;
-        const UINT height = WindowHeight;
+        const UINT width  = Window::WidthScaled;
+        const UINT height = Window::HeightScaled;
 
         // If the project is in a debug build, enable debugging via SDK Layers with this flag.
         #if defined(DEBUG) || defined(_DEBUG)
