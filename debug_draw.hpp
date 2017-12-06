@@ -821,7 +821,7 @@ namespace dd
 #endif // FLT_EPSILON && DEBUG_DRAW_USE_STD_MATH
 
 #if defined(M_PI) && DEBUG_DRAW_USE_STD_MATH
-    static const float PI = M_PI;
+    static const float PI = static_cast<float>(M_PI);
 #else // !M_PI || !DEBUG_DRAW_USE_STD_MATH
     static const float PI = 3.1415926535897931f;
 #endif // M_PI && DEBUG_DRAW_USE_STD_MATH
