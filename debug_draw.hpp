@@ -2737,6 +2737,12 @@ void projectedText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const char * con
         return;
     }
 
+    // Bail if point is behind camera.
+    if (tempPoint[Z] < -tempPoint[W] || tempPoint[Z] > tempPoint[W])
+    {
+        return;
+    }
+    
     // Perspective divide (we only care about the 2D part now):
     tempPoint[X] /= tempPoint[W];
     tempPoint[Y] /= tempPoint[W];
