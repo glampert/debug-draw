@@ -2731,8 +2731,8 @@ void projectedText(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const char * con
     float tempPoint[4];
     matTransformPointXYZW(tempPoint, pos, vpMatrix);
 
-    // Bail if W ended up as zero.
-    if (floatAbs(tempPoint[W]) < FloatEpsilon)
+    // Bail if W ended up as <= zero.
+    if (tempPoint[W] < FloatEpsilon)
     {
         return;
     }
