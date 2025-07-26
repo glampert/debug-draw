@@ -666,6 +666,16 @@ void xzSquareGrid(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
                   int durationMillis = 0,
                   bool depthEnabled = true);
 
+// Add a wireframe capsule to the debug draw queue.
+void capsule(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,)
+    ddVec3_In center, 
+    ddVec3_In axis,
+    float length, 
+    float radius, 
+    ddVec3_In color, 
+    const int durationMillis = 0, 
+    const bool depthEnabled = true);
+
 // ========================================================
 // Debug Draw vertex type:
 // The only drawing type the user has to interface with.
@@ -2080,6 +2090,13 @@ static inline void vecNormalize(ddVec3_Out result, ddVec3_In v)
     result[Z] = v[Z] * invLen;
 }
 
+static inline void vecCross(ddVec3_Out result, ddVec3_In a, ddVec3_In b)
+{
+    result[X] = a[Y] * b[Z] - a[Z] * b[Y];
+    result[Y] = a[Z] * b[X] - a[X] * b[Z];
+    result[Z] = a[X] * b[Y] - a[Y] * b[X];
+}
+
 static inline void vecOrthogonalBasis(ddVec3_Out left, ddVec3_Out up, ddVec3_In v)
 {
     // Produces two orthogonal vectors for normalized vector v.
@@ -3272,6 +3289,159 @@ void xzSquareGrid(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) const float mins,
         vecSet(from, i, y, mins);
         vecSet(to,   i, y, maxs);
         line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) from, to, color, durationMillis, depthEnabled);
+    }
+}
+
+void capsule(DD_EXPLICIT_CONTEXT_ONLY(ContextHandle ctx,) ddVec3_In center, ddVec3_In axis, 
+    float length, float radius, ddVec3_In color, const int durationMillis, const bool depthEnabled)
+{
+    if (!isInitialized(DD_EXPLICIT_CONTEXT_ONLY(ctx)))
+    {
+        return;
+    }
+
+    // Normalize the axis vector
+    float magnitude = sqrt(axis[X] * axis[X] + axis[Y] * axis[Y] + axis[Z] * axis[Z]);
+    if (magnitude == 0.0f)
+    {
+        return; // Invalid axis, exit gracefully
+    }
+    ddVec3 dir;
+    vecScale(dir, axis, 1.0f / magnitude);
+
+    // Compute endpoints (centers of the hemispheres)
+    ddVec3 temp;
+    vecScale(temp, dir, length / 2.0f);
+    ddVec3 p1, p2;
+    vecSub(p1, center, temp); // Start point
+    vecAdd(p2, center, temp); // End point
+
+    // Find vectors u and v perpendicular to dir for the cross-section plane
+    ddVec3 u, v, tempVec;
+    // Choose a vector not parallel to dir
+    if (fabs(dir[X]) <= fabs(dir[Y]) && fabs(dir[X]) <= fabs(dir[Z]))
+    {
+        vecSet(tempVec, 1.0f, 0.0f, 0.0f);
+    }
+    else if (fabs(dir[Y]) <= fabs(dir[Z]))
+    {
+        vecSet(tempVec, 0.0f, 1.0f, 0.0f);
+    }
+    else
+    {
+        vecSet(tempVec, 0.0f, 0.0f, 1.0f);
+    }
+    vecCross(u, tempVec, dir);
+    float uMag = sqrt(u[X] * u[X] + u[Y] * u[Y] + u[Z] * u[Z]);
+    vecScale(u, u, 1.0f / uMag);
+    vecCross(v, dir, u); // v is already unit length since dir and u are orthonormal
+
+    static const int stepSize = 15;
+
+    // Draw the cylinder
+    for (int j = 0; j < 360; j += stepSize)
+    {
+        float theta = degreesToRadians((float)j);
+        float theta2 = degreesToRadians((float)(j + stepSize));
+        ddVec3 point1, point2, point3, point4;
+
+        float c = floatCos(theta);
+        float s = floatSin(theta);
+        float c2 = floatCos(theta2);
+        float s2 = floatSin(theta2);
+
+        // Circle at p1
+        vecSet(point1, p1[X] + radius * (c * u[X] + s * v[X]),
+            p1[Y] + radius * (c * u[Y] + s * v[Y]),
+            p1[Z] + radius * (c * u[Z] + s * v[Z]));
+        vecSet(point2, p1[X] + radius * (c2 * u[X] + s2 * v[X]),
+            p1[Y] + radius * (c2 * u[Y] + s2 * v[Y]),
+            p1[Z] + radius * (c2 * u[Z] + s2 * v[Z]));
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point2, color, durationMillis, depthEnabled);
+
+        // Circle at p2
+        vecSet(point3, p2[X] + radius * (c * u[X] + s * v[X]),
+            p2[Y] + radius * (c * u[Y] + s * v[Y]),
+            p2[Z] + radius * (c * u[Z] + s * v[Z]));
+        vecSet(point4, p2[X] + radius * (c2 * u[X] + s2 * v[X]),
+            p2[Y] + radius * (c2 * u[Y] + s2 * v[Y]),
+            p2[Z] + radius * (c2 * u[Z] + s2 * v[Z]));
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point3, point4, color, durationMillis, depthEnabled);
+
+        // Connecting line between circles
+        line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point3, color, durationMillis, depthEnabled);
+    }
+
+    // Draw hemisphere at p1 (dome along -dir)
+    ddVec3 d1;
+    vecScale(d1, dir, -1.0f); // Direction for p1 hemisphere
+    for (int i = 0; i <= 90; i += stepSize)
+    {
+        float phi = degreesToRadians((float)i);
+        float s = floatSin(phi);
+        float c = floatCos(phi);
+
+        for (int j = 0; j < 360; j += stepSize)
+        {
+            float theta = degreesToRadians((float)j);
+            float theta2 = degreesToRadians((float)(j + stepSize));
+            ddVec3 point1, point2;
+
+            vecSet(point1, p1[X] + radius * (s * floatCos(theta) * u[X] + s * floatSin(theta) * v[X] + c * d1[X]),
+                p1[Y] + radius * (s * floatCos(theta) * u[Y] + s * floatSin(theta) * v[Y] + c * d1[Y]),
+                p1[Z] + radius * (s * floatCos(theta) * u[Z] + s * floatSin(theta) * v[Z] + c * d1[Z]));
+            vecSet(point2, p1[X] + radius * (s * floatCos(theta2) * u[X] + s * floatSin(theta2) * v[X] + c * d1[X]),
+                p1[Y] + radius * (s * floatCos(theta2) * u[Y] + s * floatSin(theta2) * v[Y] + c * d1[Y]),
+                p1[Z] + radius * (s * floatCos(theta2) * u[Z] + s * floatSin(theta2) * v[Z] + c * d1[Z]));
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point2, color, durationMillis, depthEnabled);
+
+            if (i < 90)
+            {
+                float phi2 = degreesToRadians((float)(i + stepSize));
+                float s2 = floatSin(phi2);
+                float c2 = floatCos(phi2);
+                ddVec3 point3;
+                vecSet(point3, p1[X] + radius * (s2 * floatCos(theta) * u[X] + s2 * floatSin(theta) * v[X] + c2 * d1[X]),
+                    p1[Y] + radius * (s2 * floatCos(theta) * u[Y] + s2 * floatSin(theta) * v[Y] + c2 * d1[Y]),
+                    p1[Z] + radius * (s2 * floatCos(theta) * u[Z] + s2 * floatSin(theta) * v[Z] + c2 * d1[Z]));
+                line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point3, color, durationMillis, depthEnabled);
+            }
+        }
+    }
+
+    // Draw hemisphere at p2 (dome along +dir)
+    for (int i = 0; i <= 90; i += stepSize)
+    {
+        float phi = degreesToRadians((float)i);
+        float s = floatSin(phi);
+        float c = floatCos(phi);
+
+        for (int j = 0; j < 360; j += stepSize)
+        {
+            float theta = degreesToRadians((float)j);
+            float theta2 = degreesToRadians((float)(j + stepSize));
+            ddVec3 point1, point2;
+
+            vecSet(point1, p2[X] + radius * (s * floatCos(theta) * u[X] + s * floatSin(theta) * v[X] + c * dir[X]),
+                p2[Y] + radius * (s * floatCos(theta) * u[Y] + s * floatSin(theta) * v[Y] + c * dir[Y]),
+                p2[Z] + radius * (s * floatCos(theta) * u[Z] + s * floatSin(theta) * v[Z] + c * dir[Z]));
+            vecSet(point2, p2[X] + radius * (s * floatCos(theta2) * u[X] + s * floatSin(theta2) * v[X] + c * dir[X]),
+                p2[Y] + radius * (s * floatCos(theta2) * u[Y] + s * floatSin(theta2) * v[Y] + c * dir[Y]),
+                p2[Z] + radius * (s * floatCos(theta2) * u[Z] + s * floatSin(theta2) * v[Z] + c * dir[Z]));
+            line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point2, color, durationMillis, depthEnabled);
+
+            if (i < 90)
+            {
+                float phi2 = degreesToRadians((float)(i + stepSize));
+                float s2 = floatSin(phi2);
+                float c2 = floatCos(phi2);
+                ddVec3 point3;
+                vecSet(point3, p2[X] + radius * (s2 * floatCos(theta) * u[X] + s2 * floatSin(theta) * v[X] + c2 * dir[X]),
+                    p2[Y] + radius * (s2 * floatCos(theta) * u[Y] + s2 * floatSin(theta) * v[Y] + c2 * dir[Y]),
+                    p2[Z] + radius * (s2 * floatCos(theta) * u[Z] + s2 * floatSin(theta) * v[Z] + c2 * dir[Z]));
+                line(DD_EXPLICIT_CONTEXT_ONLY(ctx,) point1, point3, color, durationMillis, depthEnabled);
+            }
+        }
     }
 }
 
