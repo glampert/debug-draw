@@ -1,8 +1,6 @@
 
 # Debug Draw
 
-[![Build Status](https://travis-ci.org/glampert/debug-draw.svg)](https://travis-ci.org/glampert/debug-draw)
-
 An immediate-mode, renderer agnostic, lightweight debug drawing API for C++.
 
 ![Debug Draw](https://raw.githubusercontent.com/glampert/debug-draw/master/samples/images/shapes.png "Debug Draw sample")
